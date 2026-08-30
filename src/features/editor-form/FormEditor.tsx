@@ -14,7 +14,7 @@ import { ACCENT_CLASS, Badge, FieldRow, cn, inputClass, kindIcon } from '../../a
 import type { ContentNode } from '../../core/model/types'
 import { getKind } from '../../core/registry/types'
 import type { FieldSpec } from '../../core/registry/types'
-import { isValidName, slugify } from '../../core/util/id'
+import { isValidName } from '../../core/util/id'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
 import { RecipeGridField } from './RecipeGridField'
@@ -76,7 +76,14 @@ export function FormEditor({ node }: { node: ContentNode }) {
             <span className="text-[11px] text-ink-400">{project.namespace}:</span>
             <input
               value={node.name}
-              onChange={(event) => updateNode(node.id, { name: slugify(event.target.value) })}
+              // Kept permissive on purpose: slugifying every keystroke would eat
+              // a trailing underscore the moment you typed it. Invalid input is
+              // flagged instead, and the generator reports it too.
+              onChange={(event) =>
+                updateNode(node.id, {
+                  name: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+                })
+              }
               aria-label="Identifier name"
               className={cn(
                 'h-6 w-56 rounded border bg-ink-900 px-1.5 font-mono text-[11px] text-ink-100 focus:outline-none',

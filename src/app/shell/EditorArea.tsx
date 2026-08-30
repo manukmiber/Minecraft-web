@@ -44,6 +44,7 @@ export function EditorArea() {
     previewOpen,
     togglePreview,
     openFile,
+    files,
   } = useProject()
   const setSideView = useUi((s) => s.setSideView)
 
@@ -52,7 +53,7 @@ export function EditorArea() {
 
   /** The generated file that corresponds to the open node, if there is one. */
   const primaryFileForNode = node
-    ? [...useProject.getState().files.values()].find((file) => file.origin.nodeId === node.id)
+    ? [...files.values()].find((file) => file.origin.nodeId === node.id)
     : undefined
 
   return (

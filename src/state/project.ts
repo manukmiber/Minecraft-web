@@ -48,6 +48,15 @@ export interface Toast {
 
 const HISTORY_LIMIT = 60
 
+/**
+ * Edits closer together than this collapse into a single undo step. Without it,
+ * typing a display name would push one entry per keystroke and undo would be
+ * useless for anything larger.
+ */
+const HISTORY_COALESCE_MS = 700
+
+let lastCommitAt = 0
+
 interface ProjectStore {
   project: ProjectModel
   files: VirtualFs
@@ -140,11 +149,18 @@ export const useProject = create<ProjectStore>((set, get) => ({
   commit(next, options) {
     const { project, past } = get()
     const generated = regenerate(next)
+
+    const now = Date.now()
+    const coalesce = past.length > 0 && now - lastCommitAt < HISTORY_COALESCE_MS
+    lastCommitAt = now
+
     set({
       project: next,
       ...generated,
       dirty: options?.silent ? get().dirty : true,
-      past: [...past.slice(-HISTORY_LIMIT + 1), project],
+      // Coalescing replaces the newest history entry rather than adding one, so
+      // the step being undone is the one before this burst of edits started.
+      past: coalesce ? past : [...past.slice(-HISTORY_LIMIT + 1), project],
       futureStack: [],
     })
   },
