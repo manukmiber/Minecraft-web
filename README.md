@@ -163,9 +163,16 @@ publish a second Worker while the old host keeps serving stale content.
 
 Pushes to `main` also deploy on their own: the repo is connected to Cloudflare
 Workers Builds, which runs the build and `wrangler deploy` for the
-`minecraft-web` Worker and reports back as a check on every pull request. When
-that check is red the live host keeps serving whatever was deployed last, so a
-red Workers Builds check means the site is stale, not just the branch.
+`minecraft-web` Worker. When that build is red the live host keeps serving
+whatever was deployed last, so a red Workers Builds check means the site is
+stale, not just the branch.
+
+Deploys are `main` only. *Builds for non-production branches* is off in
+**Settings > Build > Branch control**, so pull requests get no build, no
+preview deployment and no bot comment; `preview_urls: false` in
+`wrangler.jsonc` backs that up on the Cloudflare side. Branches are verified
+locally instead — `npm test`, `npm run build`, and
+`npx wrangler deploy --dry-run` to check the config and bindings.
 
 The Worker only proxies R2 through its binding — no R2 credential ever reaches
 the browser, and the CPU-heavy work (generating JSON, zipping the `.mcaddon`)

@@ -9,6 +9,12 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
 
+  // Deploys are main-only. Non-production branch builds are turned off in the
+  // dashboard (Settings > Build > Branch control); this keeps a version that
+  // slips through from publishing a <version>-minecraft-web.<subdomain>
+  // preview host on top of it.
+  "preview_urls": false,
+
   // Static assets = the built Vite SPA. The Worker only handles /api/*.
   "assets": {
     "directory": "./dist",
