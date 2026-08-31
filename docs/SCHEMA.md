@@ -99,9 +99,16 @@ behavior_pack/
   recipes/<name>.json
   loot_tables/blocks/<name>_immature.json
   loot_tables/blocks/<name>_mature.json
+  biomes/<name>.biome.json
+  features/<biome>_<plant>_feature.json
+  features/<biome>_choice.json          ← only when a biome scatters 2+ plants
+  features/<biome>_scatter.json
+  feature_rules/<biome>_scatter_rule.json
   scripts/main.js                       ← only when a crop grows
 resource_pack/
   manifest.json
+  biomes/<name>.client_biome.json       ← biome colours; standalone biomes only
+  fogs/<name>.fog.json
   entity/<name>.entity.json
   models/entity/<name>.geo.json
   render_controllers/<name>.render_controllers.json
@@ -143,6 +150,9 @@ Checked against the 1.26.x creator changelogs. Stable at the time of writing was
 | Item | `1.26.40` | an empty `components` object fails to register (1.26.30+); `minecraft:icon` takes the string shorthand |
 | Entity | `1.26.40` | stricter schema — numeric ranges in goals must be `{min,max}` objects |
 | Spawn rules | `1.8.0` | still the current spawn-rules format |
+| Biome, feature, feature rule | `1.13.0` | world generation still reads the 1.13.0 schema |
+| Client biome | `1.21.40` | biome colours moved out of `biomes_client.json` into per-biome resource files |
+| Fog | `1.16.100` | referenced by a client biome's `minecraft:fog_appearance` |
 | Recipe | `1.20.10` | recipe schema is conservative; supports `unlock` |
 | Loot table | `1.20.10` | |
 | Client entity, render controller, animation, animation controller | `1.10.0` | |
@@ -161,6 +171,40 @@ alongside for packs that must run on older clients.
   when a crop actually uses it.
 - **Entity AI is unaffected** — `minecraft:behavior.*` goals are still
   data-driven, so avoidance, block-eating and spawn rules need no script.
+- **World generation is unaffected too** — biomes, features and feature rules
+  are plain data, which is why a biome full of scattered crops costs nothing at
+  runtime.
+
+## Biomes
+
+A biome node emits a chain rather than a single file, because a feature file
+holds exactly one feature and generation is scoped by biome tag:
+
+| File | What it is |
+|---|---|
+| `biomes/<name>.biome.json` | climate, surface materials, generation rules and `minecraft:tags` |
+| `features/<name>_<plant>_feature.json` | a `single_block_feature` — the block, the growth state it generates at, and `may_attach_to` |
+| `features/<name>_choice.json` | a `weighted_random_feature`, only when more than one plant is assigned |
+| `features/<name>_scatter.json` | the `scatter_feature`: iterations per chunk, `scatter_chance`, and `y: q.heightmap(...)` |
+| `feature_rules/<name>_scatter_rule.json` | runs the scatter under `minecraft:biome_filter` |
+| `biomes/<name>.client_biome.json` (RP) | grass, foliage and water colours, and the fog to use |
+| `fogs/<name>.fog.json` (RP) | the fog colour above ground and under water |
+
+Tags are generated, not typed: every biome carries `<namespace>_<name>`, plus
+`<namespace>_farmland` when it is marked as farmland, plus whatever the user
+added. The feature rule filters on `<namespace>_<name>` (or on the host biome's
+tag for a nested biome), which is what stops one biome's plants appearing in
+another. The same tags are what an entity's `spawnBiomeTag` picks from.
+
+Placement constraints map onto `may_attach_to`: the ground blocks become `top`,
+and "needs water beside it" becomes `sides: ["minecraft:water"]` with
+`min_sides_must_attach: 1`. A crop with no ground override inherits its own
+`plantOn` value, so the rule lives in one place.
+
+Crow density is **not** written into any of these files — Bedrock keeps mob
+density in the entity's `spawn_rules`. The biome estimates it
+(`plants per chunk ÷ 12`, capped at 6) and the preview offers to copy it onto
+the crow entity, which is the only place it belongs.
 
 ## JSON schema validation
 

@@ -52,7 +52,7 @@ app owns it, and a hand-edit is lost the next time it saves.
 
 ```jsonc
 {
-  "kind": "entity",              // one of: block, crop, item, entity, recipe
+  "kind": "entity",              // block, crop, item, entity, recipe or biome
   "name": "crow",                // identifier name part — ^[a-z][a-z0-9_]*$
   "displayName": "Crow",         // human name; goes into the .lang file
   "notes": "Optional note shown in the inspector",
@@ -181,6 +181,40 @@ Texture slot: `main`.
 
 Texture slot: `main` (must match the UV layout of the chosen body preset).
 
+### `biome`
+
+| Field | Type | Notes |
+|---|---|---|
+| `placement` | `standalone` \| `nested` | `nested` scatters into an existing biome instead of generating a new one |
+| `hostBiome` | biome tag | nested only, e.g. `plains`, `swamp` |
+| `rarity` | number 1–20 | standalone only; weight against vanilla biomes in the same climate |
+| `temperature` | number 0–2 | below 0.15 accumulates snow; above 1.0 no rain falls |
+| `downfall` | number 0–1 | |
+| `grassColor`, `foliageColor`, `waterColor`, `fogColor` | `#rrggbb` | written to the resource-pack client biome and fog definition |
+| `topBlock`, `midBlock` | block identifier | surface materials |
+| `heightNoise` | `default` \| `lowlands` \| `swamp` \| `river` \| `beach` \| `mountains` | terrain shape |
+| `plants` | object[] | see below |
+| `scatterAttempts` | number 1–48 | planting attempts per chunk |
+| `scatterChance` | number 5–100 | percent chance each attempt succeeds |
+| `farmlandBiome` | boolean | adds the shared `<namespace>_farmland` tag |
+| `crowEntity`, `scarecrowEntity` | `#entity:...` | references only — their own fields still define them |
+| `crowDensity` | number | 0 uses the estimate from the planting density |
+| `tags` | string[] | added to the generated tags; keep `overworld` for a surface biome |
+
+Each entry in `plants`:
+
+```jsonc
+{
+  "plant": "#crop:rice_plant",   // node reference, resolved on apply
+  "weight": 8,                   // 1–20, relative to the other plants here
+  "placeOn": [],                 // empty inherits the crop's own plantOn
+  "needsWater": true,            // requires an adjacent water block
+  "maturity": "ripe"             // "ripe" | "half" | "sprout"
+}
+```
+
+---
+
 ### `recipe`
 
 | Field | Type | Notes |
@@ -263,6 +297,13 @@ over time needs a scripted custom component. The builder generates one shared
 only when something actually uses it. Entity AI is still fully data-driven, so
 mob behaviour — including the avoid-radius and block-eating above — needs no
 script at all.
+
+**A biome owns its plants, not the other way round.** Which crops grow wild
+somewhere is a property of the biome, set in the biome node's `plants` list. A
+crop node says nothing about where it scatters, so the same crop can appear in
+two biomes at different densities without either preset knowing about the other.
+The generated feature rule is filtered by the biome's tag, so nothing you assign
+to one biome can turn up in another.
 
 **Prefer fields over raw files.** A preset written in fields survives a target
 profile bump, shows up in the wizard, and can be edited by hand afterwards. Raw

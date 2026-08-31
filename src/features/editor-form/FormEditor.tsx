@@ -15,9 +15,30 @@ import type { ContentNode } from '../../core/model/types'
 import { getKind } from '../../core/registry/types'
 import type { FieldSpec } from '../../core/registry/types'
 import { isValidName } from '../../core/util/id'
+import { projectBiomeTags } from '../../core/kinds/biome'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
+import { BiomeScatterField } from './BiomeScatterField'
 import { RecipeGridField } from './RecipeGridField'
+
+/** Vanilla biome tags worth offering next to the project's own. */
+const VANILLA_BIOME_TAGS = [
+  'overworld',
+  'plains',
+  'forest',
+  'jungle',
+  'swamp',
+  'savanna',
+  'taiga',
+  'desert',
+  'beach',
+  'river',
+  'ocean',
+  'mountains',
+  'mesa',
+  'nether',
+  'the_end',
+]
 
 export function FormEditor({ node }: { node: ContentNode }) {
   const { project, updateNode, updateNodeData } = useProject()
@@ -440,6 +461,36 @@ function Field({
             onChange={onChange}
           />
         )
+
+      case 'biome-scatter':
+        return <BiomeScatterField value={value} onChange={onChange} />
+
+      case 'biome-ref': {
+        const listId = `${id}-biomes`
+        const own = projectBiomeTags(project)
+        return (
+          <>
+            <input
+              id={id}
+              list={listId}
+              value={typeof value === 'string' ? value : ''}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder={field.placeholder ?? 'overworld'}
+              className={cn(inputClass, 'font-mono')}
+            />
+            <datalist id={listId}>
+              {own.map((option) => (
+                <option key={option.value} value={option.value} label={option.label} />
+              ))}
+              {VANILLA_BIOME_TAGS.filter(
+                (tag) => !own.some((option) => option.value === tag),
+              ).map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
+          </>
+        )
+      }
 
       default:
         return (

@@ -273,6 +273,56 @@ const pests: PresetFile = {
 }
 
 /**
+ * The paddy biome. Everything here is field values over the generic biome kind:
+ * the rice scatters only inside this biome because the generated feature rule
+ * filters on the biome's own tag, and the crow link is a reference to the
+ * entities the pests preset already created rather than a second definition of
+ * them.
+ */
+const paddyBiome: PresetFile = {
+  presetFormat: PRESET_FORMAT,
+  id: 'farming.paddy_biome',
+  label: 'Rice paddy biome',
+  description:
+    'A warm, wet biome where rice grows wild at the water\u2019s edge, tagged as farmland so crows know to raid it.',
+  notes: [
+    'Apply Rice paddy first, and Crows & scarecrows if you want the crow wiring.',
+    'Open the biome and press Apply in the preview to copy the crow estimate onto the crow itself.',
+  ],
+  nodes: [
+    {
+      kind: 'biome',
+      name: 'rice_paddy',
+      displayName: 'Rice Paddy',
+      notes: 'Rice only scatters here — the feature rule is scoped to this biome\u2019s tag.',
+      data: {
+        placement: 'standalone',
+        rarity: 4,
+        temperature: 0.9,
+        downfall: 0.95,
+        grassColor: '#8fc95b',
+        foliageColor: '#6fb041',
+        waterColor: '#4f9c8b',
+        fogColor: '#d6e6c8',
+        topBlock: 'minecraft:grass_block',
+        midBlock: 'minecraft:dirt',
+        heightNoise: 'swamp',
+        plants: [
+          { plant: '#crop:rice_plant', weight: 8, placeOn: [], needsWater: true, maturity: 'ripe' },
+        ],
+        scatterAttempts: 20,
+        scatterChance: 65,
+        farmlandBiome: true,
+        crowEntity: '#entity:crow',
+        crowDensity: 0,
+        scarecrowEntity: '#entity:scarecrow',
+        tags: ['overworld'],
+      },
+    },
+  ],
+}
+
+/**
  * Dishes. The fried egg reproduces the layout asked for: egg in the centre,
  * oil to its right, pan directly below it.
  */
@@ -358,6 +408,7 @@ export const FARMING_PRESETS: PresetFile[] = [
   cookware,
   farmhands,
   pests,
+  paddyBiome,
   dishes,
 ]
 

@@ -278,10 +278,11 @@ export const entityKind: ContentKind = {
     {
       key: 'spawnBiomeTag',
       label: 'Biome tag',
-      type: 'text',
+      type: 'biome-ref',
       group: 'Spawning',
       placeholder: 'overworld',
       when: (data) => bool(data, 'spawnEnabled'),
+      help: 'Custom biomes in this add-on are offered by name; anything else is a vanilla tag.',
     },
     {
       key: 'spawnBrightnessMin',

@@ -39,7 +39,22 @@ describe('farming presets', () => {
       unresolved.push(...report.unresolved)
     }
     expect(unresolved).toEqual([])
-    expect(project.nodes).toHaveLength(14)
+    expect(project.nodes).toHaveLength(15)
+  })
+
+  it('scatters rice only inside the paddy biome the batch creates', () => {
+    const { files } = emitProject(applyAll())
+    const rule = (
+      files.get('behavior_pack/feature_rules/rice_paddy_scatter_rule.json')!.body as any
+    ).value['minecraft:feature_rules']
+
+    expect(rule.description.places_feature).toBe('sawah:rice_paddy_scatter')
+    expect(rule.conditions['minecraft:biome_filter'][0].value).toBe('sawah_rice_paddy')
+
+    const placement = (
+      files.get('behavior_pack/features/rice_paddy_rice_plant_feature.json')!.body as any
+    ).value['minecraft:single_block_feature']
+    expect(placement.places_block.name).toBe('sawah:rice_plant')
   })
 
   it('generate a pack with no errors', () => {

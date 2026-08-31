@@ -7,6 +7,7 @@
  */
 
 import { registerKind } from '../registry/types'
+import { biomeKind } from './biome'
 import { blockKind } from './block'
 import { cropKind } from './crop'
 import { entityKind } from './entity'
@@ -23,6 +24,7 @@ export function installBuiltinKinds(): void {
   registerKind(itemKind)
   registerKind(entityKind)
   registerKind(recipeKind)
+  registerKind(biomeKind)
 }
 
-export { blockKind, cropKind, itemKind, entityKind, recipeKind }
+export { blockKind, cropKind, itemKind, entityKind, recipeKind, biomeKind }

@@ -113,6 +113,16 @@ export function removeNode(project: ProjectModel, id: string): ProjectModel {
           data[field.key] = ''
           changed = true
         }
+        // A biome's plant list holds node ids too, so a deleted crop has to
+        // drop out of every biome that scattered it.
+        if (field.type === 'biome-scatter' && Array.isArray(data[field.key])) {
+          const entries = data[field.key] as Array<{ plant?: unknown }>
+          const kept = entries.filter((entry) => entry?.plant !== id)
+          if (kept.length !== entries.length) {
+            data[field.key] = kept
+            changed = true
+          }
+        }
       }
       return changed ? { ...n, data } : n
     })

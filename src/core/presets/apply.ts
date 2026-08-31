@@ -135,6 +135,21 @@ export function applyPreset(project: ProjectModel, preset: PresetFile): ApplyRep
         continue
       }
 
+      // A biome's plant list is a list of objects, each pointing at a node the
+      // preset may have created moments ago.
+      if (field.type === 'biome-scatter' && Array.isArray(value)) {
+        node.data[field.key] = value.map((entry) => {
+          if (!entry || typeof entry !== 'object') return entry
+          const plant = (entry as { plant?: unknown }).plant
+          if (!isRef(plant)) return entry
+          const target = findTarget(plant)
+          if (target) return { ...(entry as object), plant: target.id }
+          unresolved.push(`${node.kind}:${node.name}.${field.key} -> ${plant}`)
+          return { ...(entry as object), plant: '' }
+        })
+        continue
+      }
+
       if (field.type === 'recipe-grid' && Array.isArray(value)) {
         node.data[field.key] = value.map((cell) => {
           if (!isRef(cell)) return cell

@@ -24,7 +24,7 @@ src/core/          pure TypeScript, no React — testable on its own
   model/           ProjectModel, node/asset shapes, migrations
   targets/         every format_version and min_engine_version, in one place
   registry/        ContentKind: fields, texture slots, emitter, preview
-  kinds/           the built-in kinds (block, crop, item, entity, recipe)
+  kinds/           the built-in kinds (block, crop, item, entity, recipe, biome)
   generators/      the emit pass, geometry and animation builders
   presets/         preset format, validation, apply
   schema/          JSON-schema bindings for the code editor
@@ -52,12 +52,41 @@ A `ContentKind` declares what it needs; the UI is derived from that declaration:
 | `fields` | the wizard form, the inspector, validation |
 | `textureSlots` | the drag-and-drop zones |
 | `emit` | the generated pack files |
-| `preview` | what the 3D panel draws |
+| `preview` | what the preview panel draws |
 
-So adding a new type of content — a structure, a biome, a particle — is one
+So adding a new type of content — a structure, a particle, a biome — is one
 entry in `src/core/kinds/`, not a new screen. The farming batch is proof: it is
 data (`src/presets/farming/`) laid over the generic kinds, with no special cases
 anywhere in the engine.
+
+Two of those declarations can ask for something the generic wizard does not
+have: a field type (`recipe-grid`, `biome-scatter`) or a preview type
+(`biome`) that maps to one component. That is the seam for a control that is
+genuinely bespoke — a crafting grid, a plant checklist — and it stays a single
+`case` in the wizard rather than a per-kind form.
+
+### Biomes and their plants
+
+A biome is one node that emits a chain, because Bedrock allows one feature per
+file and scopes generation by biome tag:
+
+```
+biomes/<name>.biome.json               climate, surface, tags
+features/<name>_<plant>_feature.json   where one plant may sit
+features/<name>_choice.json            weighted pick, when there is more than one
+features/<name>_scatter.json           spread over the chunk
+feature_rules/<name>_scatter_rule.json run it — but only in this biome
+```
+
+The rule's `minecraft:biome_filter` matches the biome's own generated tag, which
+is what keeps one biome's plants out of every other biome. A *nested* biome
+skips its generation rules and points that filter at a vanilla tag instead, so
+its plants scatter through a biome that already exists.
+
+Crow density is the one number a biome cannot enforce itself: mob density lives
+in the entity's `spawn_rules`, not in biome JSON. So the biome estimates it from
+the planting density and offers to write it onto the crow — one direction, no
+second copy of a spawn definition.
 
 ## Two-way editing, honestly
 

@@ -16,6 +16,7 @@ import {
   Hammer,
   Package,
   Sprout,
+  Trees,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -24,7 +25,7 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
 }
 
 /** Icons referenced by name from the kind registry. */
-const KIND_ICONS: Record<string, LucideIcon> = { Box, Package, Sprout, Bird, Hammer }
+const KIND_ICONS: Record<string, LucideIcon> = { Box, Package, Sprout, Bird, Hammer, Trees }
 
 export function kindIcon(name: string): LucideIcon {
   return KIND_ICONS[name] ?? Box

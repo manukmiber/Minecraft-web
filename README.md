@@ -10,8 +10,8 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
 
 ## What it does
 
-- **A form instead of JSON.** Blocks, crops, items, entities and recipes are
-  created from wizards. Every control is generated from the content kind's own
+- **A form instead of JSON.** Blocks, crops, items, entities, recipes and
+  biomes are created from wizards. Every control is generated from the content kind's own
   field declaration, so the tool stays generic rather than being built around
   one theme.
 - **The two packs cannot desynchronise.** The whole pack tree is regenerated
@@ -24,7 +24,12 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
   validation. Generated files are read-only until you explicitly take one over,
   which records a tracked, revertible override.
 - **3D preview.** Blocks, items, crop growth stages and entities, built from the
-  same geometry the pack ships.
+  same geometry the pack ships. A biome gets a flat preview instead: its colours
+  as the game mixes them, the plants that will grow wild in it and how many
+  crows that feeds.
+- **Biomes own their plants.** Assign crops to a biome, weight them against each
+  other, and the scatter features and feature rules are written scoped to that
+  biome — nothing leaks into the biome next door.
 - **Save and Export are separate.** Save commits a version to your project repo;
   Export builds a `.mcaddon` in the browser. Both require a changelog entry.
 - **Preset inbox.** Anything another tool writes into `preset/` in the project

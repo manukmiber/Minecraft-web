@@ -31,6 +31,10 @@ export type FieldType =
   | 'stage-list'
   /** The interactive 3x3 crafting grid. */
   | 'recipe-grid'
+  /** The plant checklist of a biome, with per-plant density and placement. */
+  | 'biome-scatter'
+  /** A biome tag, autocompleted from this project's biomes plus the vanilla set. */
+  | 'biome-ref'
   /** Free list of strings (families, tags, ...). */
   | 'string-list'
 
@@ -81,6 +85,8 @@ export type PreviewSpec =
   | { type: 'crop'; stagesKey: string; slotPrefix: string }
   /** Bedrock geometry rendered from a `.geo.json`, textured by an entity slot. */
   | { type: 'entity'; textureSlot: string; geometryKey?: string }
+  /** Flat ambience panel: biome colours, the plants in it and the crow estimate. */
+  | { type: 'biome' }
   /** Nothing meaningful to show in 3D (recipes, loot tables). */
   | { type: 'none' }
 

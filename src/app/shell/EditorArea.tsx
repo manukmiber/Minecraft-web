@@ -11,10 +11,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Blocks, Code2, Eye, EyeOff, LayoutPanelLeft } from 'lucide-react'
 
 import { Button, EmptyState, cn } from '../ui/primitives'
+import { getKind } from '../../core/registry/types'
 import { useProject } from '../../state/project'
 import { useUi } from '../../state/ui'
 import { EditorTabs } from './EditorTabs'
 import { FormEditor } from '../../features/editor-form/FormEditor'
+import { BiomePreview } from '../../features/preview-biome/BiomePreview'
 
 // Monaco and three.js are the two heavy dependencies in the app. Loading them
 // on first use keeps the initial paint quick without giving up either feature.
@@ -50,6 +52,10 @@ export function EditorArea() {
 
   const tab = tabs.find((t) => t.id === activeTabId) ?? null
   const node = tab?.type === 'node' ? project.nodes.find((n) => n.id === tab.nodeId) : undefined
+
+  // A biome has no geometry, so its preview is a flat ambience panel rather
+  // than the 3D canvas — and it costs nothing to load, so it is not lazy.
+  const previewType = node ? getKind(node.kind)?.preview.type : undefined
 
   /** The generated file that corresponds to the open node, if there is one. */
   const primaryFileForNode = node
@@ -173,9 +179,13 @@ export function EditorArea() {
                   className="shrink-0 overflow-hidden border-l border-ink-800 bg-ink-950"
                 >
                   <div className="h-full w-[360px]">
-                    <Suspense fallback={<Loading label="Loading preview…" />}>
-                      <Preview3D node={node} />
-                    </Suspense>
+                    {previewType === 'biome' ? (
+                      <BiomePreview node={node} />
+                    ) : (
+                      <Suspense fallback={<Loading label="Loading preview…" />}>
+                        <Preview3D node={node} />
+                      </Suspense>
+                    )}
                   </div>
                 </motion.aside>
               ) : null}
