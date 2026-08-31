@@ -18,8 +18,6 @@ function asset(id: string): AssetRef {
     size: 128,
     width: 16,
     height: 16,
-    r2Key: null,
-    repoPath: null,
     addedAt: new Date().toISOString(),
   }
 }

@@ -1,41 +1,51 @@
 /**
  * Settings.
  *
- * Everything sensitive here stays in this browser. The GitHub token is sent
- * only to api.github.com and the Worker passphrase only to this app's own
- * /api routes; nothing is stored server-side.
+ * There is nothing to connect and no credential to enter: the app is static
+ * files plus this browser's storage. What is left is the project itself, the
+ * defaults new projects start from, and a place to see and prune what the
+ * browser is holding.
  */
 
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { CheckCircle2, Cloud, Github, KeyRound, Package, XCircle } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { HardDrive, KeyRound, Package, Trash2 } from 'lucide-react'
 
 import { Badge, Button, FieldRow, Section, Spinner, cn, inputClass } from '../../app/ui/primitives'
 import { TARGET_PROFILES } from '../../core/targets/profiles'
 import { isValidNamespace } from '../../core/util/id'
-import { github, r2 } from '../../state/services'
-import type { WorkerHealth } from '../../integrations/r2/client'
+import { assets, workspace } from '../../state/services'
+import type { StorageUsage } from '../../integrations/local/workspace'
 import { useProject } from '../../state/project'
 import { useSettings } from '../../state/settings'
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function SettingsView() {
   const settings = useSettings()
-  const { project, commit } = useProject()
+  const { project, commit, toast } = useProject()
 
-  const [health, setHealth] = useState<WorkerHealth | null>(null)
-  const [checkingWorker, setCheckingWorker] = useState(true)
-  const [repoStatus, setRepoStatus] = useState<
-    { ok: true; label: string } | { ok: false; label: string } | null
-  >(null)
-  const [verifying, setVerifying] = useState(false)
+  const [usage, setUsage] = useState<StorageUsage | null>(null)
+  const [assetUsage, setAssetUsage] = useState<{ count: number; bytes: number } | null>(null)
+  const [measuring, setMeasuring] = useState(true)
+  const [sweeping, setSweeping] = useState(false)
+
+  const measure = useCallback(async () => {
+    setMeasuring(true)
+    try {
+      setUsage(await workspace.usage())
+      setAssetUsage(await assets.totalBytes())
+    } finally {
+      setMeasuring(false)
+    }
+  }, [])
 
   useEffect(() => {
-    void (async () => {
-      setCheckingWorker(true)
-      setHealth(await r2.health())
-      setCheckingWorker(false)
-    })()
-  }, [])
+    void measure()
+  }, [measure])
 
   const namespaceValid = isValidNamespace(project.namespace)
 
@@ -120,148 +130,86 @@ export function SettingsView() {
         </ul>
       </Section>
 
-      <Section title="Project repository">
+      <Section title="Local storage">
         <p className="pb-2 text-[11px] leading-relaxed text-ink-300">
-          This repo is the database: save slots, the preset inbox, the changelog and exported
-          archives all live in it. Keep the token to a fine-grained one with contents write access
-          on that single repository.
+          This browser is the database. Save slots, the preset inbox, the changelog and every
+          texture you have dropped live in its IndexedDB — nothing is uploaded, and the deployed
+          app is static files with no server behind them. Clearing site data for this origin
+          deletes all of it, so keep backup .zips of anything that matters (Versions panel).
         </p>
 
-        <FieldRow label="GitHub token" help="Stored in this browser only. Sent only to api.github.com.">
-          <input
-            type="password"
-            value={settings.githubToken}
-            onChange={(event) => settings.set('githubToken', event.target.value)}
-            placeholder="github_pat_…"
-            className={cn(inputClass, 'font-mono')}
-            autoComplete="off"
-          />
-        </FieldRow>
-
-        <div className="grid grid-cols-2 gap-2">
-          <FieldRow label="Owner">
-            <input
-              value={settings.githubOwner}
-              onChange={(event) => settings.set('githubOwner', event.target.value.trim())}
-              placeholder="manukmiber"
-              className={cn(inputClass, 'font-mono')}
-            />
-          </FieldRow>
-          <FieldRow label="Repository">
-            <input
-              value={settings.githubRepo}
-              onChange={(event) => settings.set('githubRepo', event.target.value.trim())}
-              placeholder="my-addon-data"
-              className={cn(inputClass, 'font-mono')}
-            />
-          </FieldRow>
-        </div>
-
-        <FieldRow label="Branch">
-          <input
-            value={settings.githubBranch}
-            onChange={(event) => settings.set('githubBranch', event.target.value.trim())}
-            placeholder="main"
-            className={cn(inputClass, 'font-mono')}
-          />
-        </FieldRow>
-
-        <div className="flex items-center gap-2 pt-1">
-          <Button
-            size="sm"
-            variant="subtle"
-            icon={verifying ? <Spinner /> : <Github size={13} />}
-            disabled={verifying || !settings.githubToken}
-            onClick={async () => {
-              setVerifying(true)
-              setRepoStatus(null)
-              try {
-                const info = await github.verify()
-                setRepoStatus({
-                  ok: info.canPush,
-                  label: info.canPush
-                    ? `${info.fullName} — write access confirmed`
-                    : `${info.fullName} — the token cannot push, so saving will fail`,
-                })
-              } catch (failure) {
-                setRepoStatus({
-                  ok: false,
-                  label: failure instanceof Error ? failure.message : String(failure),
-                })
-              } finally {
-                setVerifying(false)
-              }
-            }}
-          >
-            Test connection
-          </Button>
-
-          {repoStatus ? (
-            <motion.span
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={cn(
-                'flex items-center gap-1.5 text-[11px]',
-                repoStatus.ok ? 'text-mint-500' : 'text-rose-500',
-              )}
-            >
-              {repoStatus.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-              {repoStatus.label}
-            </motion.span>
-          ) : null}
-        </div>
-      </Section>
-
-      <Section title="Texture storage">
-        <p className="pb-2 text-[11px] leading-relaxed text-ink-300">
-          Dropped PNGs are cached in this browser and pushed to R2 through the Worker, which holds
-          the bucket binding. No R2 credential ever reaches the page.
-        </p>
-
-        <div className="flex items-center gap-2 rounded-md border border-ink-700 bg-ink-850 p-2.5">
-          {checkingWorker ? (
-            <Spinner />
-          ) : health ? (
-            <Cloud size={14} className={health.bucketBound ? 'text-mint-500' : 'text-amber-500'} />
-          ) : (
-            <Cloud size={14} className="text-ink-400" />
-          )}
-          <div className="flex-1 text-[11px] leading-relaxed">
-            {checkingWorker ? (
-              <span className="text-ink-300">Checking the Worker…</span>
-            ) : !health ? (
-              <span className="text-ink-300">
-                No Worker responding. That is expected under plain <code>vite dev</code> — textures
-                stay in this browser until a Save carries them into the repo.
-              </span>
-            ) : health.bucketBound ? (
-              <span className="text-ink-100">
-                Worker reachable, R2 bucket bound.{' '}
-                {health.authRequired ? 'A passphrase is required.' : 'Running without a passphrase.'}
-              </span>
+        <div className="flex items-center gap-2.5 rounded-md border border-ink-700 bg-ink-850 p-2.5">
+          <HardDrive size={14} className="shrink-0 text-accent-500" />
+          <div className="flex-1 text-[11px] leading-relaxed text-ink-100">
+            {measuring ? (
+              <span className="text-ink-300">Measuring…</span>
             ) : (
-              <span className="text-amber-500">
-                Worker reachable but no R2 bucket is bound. Check the r2_buckets binding in
-                wrangler.jsonc.
-              </span>
+              <>
+                {usage?.slots ?? 0} save slot{usage?.slots === 1 ? '' : 's'} ·{' '}
+                {assetUsage?.count ?? 0} textures ({formatBytes(assetUsage?.bytes ?? 0)}) ·{' '}
+                {usage?.presets ?? 0} inbox presets · {usage?.changelogEntries ?? 0} changelog
+                entries
+              </>
             )}
           </div>
         </div>
 
-        {health?.authRequired ? (
-          <FieldRow
-            label="Worker passphrase"
-            help="Must match the API_PASSPHRASE secret set on the Worker."
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <Button
+            size="sm"
+            variant="subtle"
+            icon={sweeping ? <Spinner /> : <Trash2 size={12} />}
+            disabled={sweeping || measuring}
+            title="Delete texture bytes that no save slot and no open project references"
+            onClick={async () => {
+              setSweeping(true)
+              try {
+                // The open project counts as live even though it is not saved
+                // yet — sweeping it out from under an unsaved edit would be a
+                // data-loss bug wearing the costume of housekeeping.
+                const live = await workspace.referencedAssetIds()
+                for (const asset of project.assets) live.add(asset.id)
+                const removed = await assets.sweep(live)
+                await measure()
+                toast({
+                  tone: 'success',
+                  title: removed > 0 ? `Freed ${removed} unused textures` : 'Nothing to clean up',
+                })
+              } catch (failure) {
+                toast({
+                  tone: 'error',
+                  title: 'Could not clean up storage',
+                  detail: failure instanceof Error ? failure.message : String(failure),
+                })
+              } finally {
+                setSweeping(false)
+              }
+            }}
           >
-            <input
-              type="password"
-              value={settings.workerPassphrase}
-              onChange={(event) => settings.set('workerPassphrase', event.target.value)}
-              className={cn(inputClass, 'font-mono')}
-              autoComplete="off"
-            />
-          </FieldRow>
-        ) : null}
+            Clean up unused textures
+          </Button>
+
+          <Button
+            size="sm"
+            variant="danger"
+            icon={<Trash2 size={12} />}
+            disabled={measuring}
+            onClick={async () => {
+              if (
+                !window.confirm(
+                  'Delete every save slot, preset and changelog entry stored in this browser? Textures are kept until the next clean-up. This cannot be undone.',
+                )
+              ) {
+                return
+              }
+              await workspace.clearAll()
+              await measure()
+              toast({ tone: 'info', title: 'Local workspace cleared' })
+            }}
+          >
+            Erase all saved versions
+          </Button>
+        </div>
       </Section>
 
       <Section title="Defaults for new projects">
@@ -291,8 +239,8 @@ export function SettingsView() {
           </p>
           <p className="flex items-center gap-2">
             <KeyRound size={13} className="text-ink-400" />
-            Single-user by design — there is no account system and no server-side copy of your
-            credentials.
+            Local by design — no account, no server, no credentials. Deployed as static files on
+            Cloudflare Pages.
           </p>
           <div className="flex gap-2 pt-1">
             <Badge tone="neutral">model v{project.modelVersion}</Badge>

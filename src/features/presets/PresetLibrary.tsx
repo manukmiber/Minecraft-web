@@ -1,7 +1,7 @@
 /**
  * The built-in preset library.
  *
- * Applying one is the same operation as applying a preset from the repo inbox —
+ * Applying one is the same operation as applying a preset from the inbox —
  * it goes through `applyPreset`, and the report says exactly what was created
  * or replaced.
  */

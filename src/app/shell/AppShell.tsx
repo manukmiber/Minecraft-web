@@ -22,6 +22,7 @@ import { PresetInbox } from '../../features/presets/PresetInbox'
 import { PresetLibrary } from '../../features/presets/PresetLibrary'
 import { SettingsView } from '../../features/settings/SettingsView'
 import { VersionsView } from '../../features/versions/VersionsView'
+import { restoreLastSession } from '../../features/save-export/session'
 import { useProject } from '../../state/project'
 import { useUi, type SideView } from '../../state/ui'
 
@@ -54,6 +55,12 @@ function SidePanelBody({ view }: { view: SideView }) {
 export function AppShell() {
   const { sideView, sidebarOpen, sidebarWidth, setSidebarWidth } = useUi()
   const { undo, redo, dirty } = useProject()
+
+  // Reopen whatever slot was last in use. Runs once, before any editing can
+  // have happened, and gives up quietly if that slot is gone.
+  useEffect(() => {
+    void restoreLastSession()
+  }, [])
 
   // Editor-style shortcuts, plus a guard against closing the tab with unsaved
   // work in it.

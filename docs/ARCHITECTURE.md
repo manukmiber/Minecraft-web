@@ -31,17 +31,19 @@ src/core/          pure TypeScript, no React — testable on its own
   vfs/             virtual file tree
   export/          .mcaddon packaging (JSZip)
 
-src/integrations/  the outside world
-  github/          Git Data API client + the project-repo layout
-  r2/              client for the Worker's R2 proxy
-  assets/          IndexedDB cache + R2, PNG validation
+src/integrations/  storage
+  local/           the workspace store: save slots, changelog, preset inbox
+  assets/          texture bytes in IndexedDB, PNG validation
 
-src/state/         zustand stores (project, settings, ui) and the service singletons
+src/state/         zustand stores (project, settings, ui) and the store singletons
 src/app/           shell: activity bar, tabs, palette, status bar, panels
 src/features/      the panels and editors
 src/presets/       shipped preset data (the farming batch)
-worker/            the Cloudflare Worker: R2 proxy and nothing else
+public/            Cloudflare Pages config (_redirects, _headers)
 ```
+
+There is no `src/integrations/network`, because there is no network. The app is
+static files; every byte it holds is held by the browser it runs in.
 
 ## Why the registry exists
 
@@ -72,30 +74,44 @@ reversible.
 
 ## Persistence
 
-There is no database. The project repo is the store:
+The browser is the database. Two IndexedDB stores, split by what they hold:
 
 ```
-saves/<slot>/project.json    a complete model — switching slots switches versions
-saves/<slot>/assets/*.png
-preset/*.json                the inbox; applied files move to preset/applied/
-exports/*.mcaddon
-CHANGELOG.md
+mmmmmmmmmmmmm / workspace          (src/integrations/local/workspace.ts)
+  slot:<name>       one complete model — switching slots switches versions
+  preset:<id>       the inbox; applied presets are marked, not deleted
+  changelog         the entry list, newest first
+
+default keyval store               (src/integrations/assets/store.ts)
+  asset:<id>        texture bytes
 ```
 
-A Save is a single commit built through the Git Data API (blobs → tree → commit
-→ ref), carrying the model, its textures and the changelog entry together, so a
-half-written save is not a state that can exist.
+Textures are keyed by asset id rather than by slot, so several slots referencing
+the same image share one copy. That is also why sweeping unused bytes has to ask
+the workspace for *every* slot's references, not just the open project's —
+`LocalWorkspace.referencedAssetIds()` exists for exactly that.
+
+A save is two writes (the slot, then the changelog entry) rather than one atomic
+commit. The ordering is deliberate: the slot lands first, so the worst case is a
+saved version with no log line, never a log line for a version that was not
+written.
+
+Nothing here survives clearing site data, which is what backups are for.
+`src/features/save-export/backup.ts` writes a zip in the layout a save slot used
+to occupy in a repo — `project.json`, `assets/<id>.png`, `CHANGELOG.md` — so a
+backup is readable without this app and importable into any browser running it.
 
 ## Where work happens
 
 | Task | Where | Why |
 |---|---|---|
 | Generating JSON | browser | pure functions, instant feedback |
-| Zipping the `.mcaddon` | browser | a Worker would hit its CPU limit on a pack with textures |
-| Storing textures | Worker → R2 binding | keeps the R2 credential off the page |
-| Everything else | GitHub | history and versioning for free |
+| Zipping the `.mcaddon` | browser | the textures are already here; nothing to upload |
+| Save slots, changelog, presets | IndexedDB | no account to create, no server to trust |
+| Moving a project between machines | backup `.zip` | explicit, and the only thing that ever leaves |
 
-The Worker is intentionally thin — it proxies R2 and answers a health check.
+Everything runs in the page, so the deployment is a static bundle on Cloudflare
+Pages with no Worker, no bucket and no secrets behind it.
 
 ## Bedrock specifics worth remembering
 

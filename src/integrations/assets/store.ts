@@ -1,19 +1,21 @@
 /**
- * Asset bytes: local first, R2 as the durable copy.
+ * Asset bytes, kept in this browser.
  *
- * A dropped PNG is readable immediately from IndexedDB so the preview and the
- * export never wait on the network, and it is pushed to R2 in the background so
- * the working state survives a different browser or a cleared cache. A Save
- * flushes it once more into the project repo, which is the permanent home.
+ * A dropped PNG is validated, written to IndexedDB and available immediately —
+ * to the preview, to the export and to every save slot that references it.
+ * There is no upload step and no remote copy: the bytes live next to the save
+ * slots that point at them, and a backup .zip is how they leave the machine.
  */
 
 import { del, get, set, keys } from 'idb-keyval'
 
 import type { AssetRef } from '../../core/model/types'
 import { nodeId } from '../../core/util/id'
-import { R2Client } from '../r2/client'
 
 const CACHE_PREFIX = 'asset:'
+
+/** Matches the largest texture worth putting in a pack, and keeps IndexedDB sane. */
+export const MAX_ASSET_BYTES = 8 * 1024 * 1024
 
 export interface ProbedImage {
   width: number
@@ -43,22 +45,12 @@ export interface ImportResult {
 }
 
 export class AssetStore {
-  constructor(private r2: R2Client) {}
-
-  setClient(r2: R2Client): void {
-    this.r2 = r2
-  }
-
-  /**
-   * Validates, caches and (best effort) uploads a dropped file.
-   * A failed upload is not fatal: the bytes are already local, and the next
-   * Save will carry them into the repo.
-   */
-  async importFile(file: File, projectId: string, recommended?: number): Promise<ImportResult> {
+  /** Validates a dropped file and stores its bytes under a fresh asset id. */
+  async importFile(file: File, recommended?: number): Promise<ImportResult> {
     if (!/\.png$/i.test(file.name) && file.type !== 'image/png') {
       throw new Error(`${file.name} is not a PNG. Bedrock textures have to be PNG files.`)
     }
-    if (file.size > 8 * 1024 * 1024) {
+    if (file.size > MAX_ASSET_BYTES) {
       throw new Error(`${file.name} is larger than 8 MB.`)
     }
 
@@ -78,43 +70,25 @@ export class AssetStore {
     const id = nodeId('asset')
     await set(CACHE_PREFIX + id, bytes)
 
-    const asset: AssetRef = {
-      id,
-      fileName: file.name,
-      mime: 'image/png',
-      size: file.size,
-      width: probed.width,
-      height: probed.height,
-      r2Key: null,
-      repoPath: null,
-      addedAt: new Date().toISOString(),
+    return {
+      asset: {
+        id,
+        fileName: file.name,
+        mime: 'image/png',
+        size: file.size,
+        width: probed.width,
+        height: probed.height,
+        addedAt: new Date().toISOString(),
+      },
+      warning,
     }
-
-    try {
-      asset.r2Key = await this.r2.put(`${projectId}/${id}.png`, bytes, 'image/png')
-    } catch {
-      // Offline or no Worker: the local copy is enough to keep working.
-    }
-
-    return { asset, warning }
   }
 
-  /** Local cache first, then R2, so exporting works offline once warmed. */
   async read(asset: AssetRef): Promise<ArrayBuffer | null> {
-    const cached = await get<ArrayBuffer>(CACHE_PREFIX + asset.id)
-    if (cached) return cached
-
-    if (asset.r2Key) {
-      const remote = await this.r2.get(asset.r2Key)
-      if (remote) {
-        await set(CACHE_PREFIX + asset.id, remote)
-        return remote
-      }
-    }
-    return null
+    return (await get<ArrayBuffer>(CACHE_PREFIX + asset.id)) ?? null
   }
 
-  /** Puts bytes loaded from somewhere else (a repo save) into the local cache. */
+  /** Stores bytes that came from somewhere else — an imported backup .zip. */
   async prime(assetId: string, bytes: ArrayBuffer): Promise<void> {
     await set(CACHE_PREFIX + assetId, bytes)
   }
@@ -130,7 +104,26 @@ export class AssetStore {
     return URL.createObjectURL(new Blob([bytes], { type: asset.mime }))
   }
 
-  /** Drops cached bytes for assets the project no longer references. */
+  /** Total bytes held, so Settings can show what the browser is carrying. */
+  async totalBytes(): Promise<{ count: number; bytes: number }> {
+    let count = 0
+    let bytes = 0
+    for (const key of await keys()) {
+      if (typeof key !== 'string' || !key.startsWith(CACHE_PREFIX)) continue
+      const stored = await get<ArrayBuffer>(key)
+      if (!stored) continue
+      count++
+      bytes += stored.byteLength
+    }
+    return { count, bytes }
+  }
+
+  /**
+   * Drops bytes nothing references any more. `liveIds` has to cover every
+   * stored save slot as well as the open project — this cache is the only copy
+   * there is, so a sweep that only knew about the open project would delete
+   * textures belonging to the other slots.
+   */
   async sweep(liveIds: Set<string>): Promise<number> {
     const all = await keys()
     let removed = 0

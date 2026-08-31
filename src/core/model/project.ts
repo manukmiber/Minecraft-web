@@ -149,6 +149,23 @@ export function setOverride(
 }
 
 /**
+ * Older saves carry the fields of the retired remote storage (`r2Key`,
+ * `repoPath`). Rebuilding the record from the fields still in use drops them
+ * rather than letting them ride along in every future save.
+ */
+function normalizeAsset(raw: Partial<AssetRef>): AssetRef {
+  return {
+    id: raw.id ?? nodeId('asset'),
+    fileName: raw.fileName ?? 'texture.png',
+    mime: raw.mime ?? 'image/png',
+    size: raw.size ?? 0,
+    width: raw.width ?? null,
+    height: raw.height ?? null,
+    addedAt: raw.addedAt ?? new Date().toISOString(),
+  }
+}
+
+/**
  * Brings a save written by an older build up to the current shape. Unknown
  * future versions are returned untouched rather than mangled — the UI warns
  * instead.
@@ -175,7 +192,7 @@ export function migrateProject(raw: unknown): ProjectModel {
       data: node.data ?? {},
       textures: node.textures ?? {},
     })),
-    assets: Array.isArray(input.assets) ? input.assets : [],
+    assets: Array.isArray(input.assets) ? input.assets.map(normalizeAsset) : [],
     overrides: (input.overrides as Record<string, string>) ?? {},
     meta: { ...fallback.meta, ...(input.meta ?? {}) },
   }

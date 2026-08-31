@@ -4,8 +4,8 @@
  * One JSON object describes an entire add-on. It is the single source of truth:
  * the whole `behavior_pack/` + `resource_pack/` tree is regenerated from it on
  * every change, which is what makes cross-pack references impossible to get out
- * of sync. It is also exactly what gets committed to the project repo as
- * `saves/<slot>/project.json`.
+ * of sync. It is also exactly what a save slot stores, and what a backup .zip
+ * carries as `project.json`.
  */
 
 /** Bumped whenever the shape changes; `migrateProject` upgrades older saves. */
@@ -21,8 +21,8 @@ export interface PackUuids {
 }
 
 /**
- * A binary the project references. Bytes live in R2 (and in a local IndexedDB
- * cache); the model only ever carries the metadata.
+ * A binary the project references. Bytes live in this browser's IndexedDB,
+ * keyed by `id`; the model only ever carries the metadata.
  */
 export interface AssetRef {
   id: string
@@ -31,10 +31,6 @@ export interface AssetRef {
   size: number
   width: number | null
   height: number | null
-  /** Key inside the R2 workspace bucket, once uploaded. */
-  r2Key: string | null
-  /** Path inside the project repo, once a Save has flushed it. */
-  repoPath: string | null
   addedAt: string
 }
 
@@ -89,10 +85,12 @@ export interface ProjectModel {
   meta: ProjectMeta
 }
 
-/** What a save slot looks like in the project repo. */
+/** A stored save slot, as the Versions panel lists it. */
 export interface SaveSlot {
   name: string
-  path: string
-  updatedAt: string | null
-  sha: string | null
+  updatedAt: string
+  nodeCount: number
+  assetCount: number
+  /** The note written when the slot was last saved. */
+  changelog: string
 }

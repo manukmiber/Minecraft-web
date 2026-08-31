@@ -1,8 +1,8 @@
 /**
  * A texture slot you can drop a PNG onto.
  *
- * Dropping validates the file, caches it locally, pushes it to R2 and points
- * the slot at it. From there the generator decides the atlas entry and the file
+ * Dropping validates the file, stores its bytes in this browser and points the
+ * slot at it. From there the generator decides the atlas entry and the file
  * path — which is why nothing in this component knows or cares what a
  * `terrain_texture.json` is.
  */
@@ -33,7 +33,7 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
     if (!file) return
     setUploading(true)
     try {
-      const result = await assetStore.importFile(file, project.id, slot.recommended)
+      const result = await assetStore.importFile(file, slot.recommended)
       registerAsset(result.asset)
       setNodeTexture(node.id, slot.key, result.asset.id)
       if (result.warning) {

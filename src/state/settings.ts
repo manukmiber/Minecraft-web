@@ -1,10 +1,9 @@
 /**
  * Settings.
  *
- * Single-user by design: the GitHub token and the Worker passphrase live in
- * this browser's localStorage and are never sent anywhere except GitHub and
- * this app's own Worker. There is no account system to build and no server-side
- * copy to leak.
+ * Local by design: there is no account, no token and no server to talk to. The
+ * few preferences here live in this browser's localStorage next to the save
+ * slots in IndexedDB, and the deployed app is nothing but static files.
  */
 
 import { create } from 'zustand'
@@ -16,15 +15,6 @@ import { DEFAULT_NAMESPACE } from '../core/model/project'
 export interface SettingsState {
   /** Repo holding this app's own source. Informational only. */
   appRepo: string
-
-  /** The project repo — the actual database. */
-  githubToken: string
-  githubOwner: string
-  githubRepo: string
-  githubBranch: string
-
-  /** Passphrase for this deployment's Worker, when it sets one. */
-  workerPassphrase: string
 
   defaultNamespace: string
   defaultTargetProfileId: string
@@ -39,11 +29,6 @@ export interface SettingsState {
 
 const DEFAULTS = {
   appRepo: 'manukmiber/Minecraft-web',
-  githubToken: '',
-  githubOwner: '',
-  githubRepo: '',
-  githubBranch: 'main',
-  workerPassphrase: '',
   defaultNamespace: DEFAULT_NAMESPACE,
   defaultTargetProfileId: DEFAULT_TARGET_ID,
   author: '',
@@ -57,11 +42,23 @@ export const useSettings = create<SettingsState>()(
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
       reset: () => set({ ...DEFAULTS }),
     }),
-    { name: 'mmmmmmmmmmmmm.settings' },
+    {
+      name: 'mmmmmmmmmmmmm.settings',
+      version: 2,
+      // Version 1 stored a GitHub token and a Worker passphrase. Rebuilding the
+      // state from the known keys drops them from localStorage on first load
+      // instead of leaving credentials behind for storage this build no longer
+      // has any use for.
+      migrate: (persisted) => {
+        const previous = (persisted ?? {}) as Partial<SettingsState>
+        const next = { ...DEFAULTS }
+        for (const key of Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]) {
+          const value = previous[key]
+          if (typeof value === typeof DEFAULTS[key]) (next[key] as unknown) = value
+        }
+        return next as SettingsState
+      },
+      partialize: ({ set: _set, reset: _reset, ...rest }) => rest as SettingsState,
+    },
   ),
 )
-
-/** True once the project repo is configured well enough to save. */
-export function repoConfigured(state: SettingsState): boolean {
-  return Boolean(state.githubToken && state.githubOwner && state.githubRepo && state.githubBranch)
-}

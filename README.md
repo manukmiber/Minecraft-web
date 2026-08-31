@@ -18,17 +18,20 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
   from one model on every change, so texture atlas entries, `.lang` keys,
   manifest dependencies and cross-pack identifiers are always consistent by
   construction.
-- **Drag a PNG onto a slot.** It is validated, cached locally, pushed to R2, and
+- **Drag a PNG onto a slot.** It is validated, stored in your browser, and
   wired into `item_texture.json` or `terrain_texture.json` at the right path.
 - **Code view when you want it.** A full Monaco editor with JSON schema
   validation. Generated files are read-only until you explicitly take one over,
   which records a tracked, revertible override.
 - **3D preview.** Blocks, items, crop growth stages and entities, built from the
   same geometry the pack ships.
-- **Save and Export are separate.** Save commits a version to your project repo;
-  Export builds a `.mcaddon` in the browser. Both require a changelog entry.
-- **Preset inbox.** Anything another tool writes into `preset/` in the project
-  repo appears in the app, ready to apply to the active save.
+- **Save and Export are separate.** Save stores a version in this browser;
+  Export builds a `.mcaddon` you can install. Both require a changelog entry.
+- **Preset inbox.** Drop a `.json` preset another tool wrote and it waits there
+  until you apply it — nothing is merged behind your back.
+- **Nothing leaves your machine.** No account, no token, no server: saves,
+  textures and history all live in your browser's storage, and a backup `.zip`
+  is how a project moves to another machine.
 
 ## Screens
 
@@ -37,70 +40,59 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
 | Content | Everything in the add-on, grouped by kind |
 | Files | The generated pack tree |
 | Presets | Ready-made content to drop in |
-| Preset inbox | Presets waiting in the project repo |
-| Versions | Save slots — switch between whole versions |
-| Settings | Namespace, target profile, GitHub and Worker credentials |
+| Preset inbox | Presets you have dropped in, waiting to be applied |
+| Versions | Save slots, backups and the changelog |
+| Settings | Namespace, target profile, defaults, local storage |
 
 `Ctrl/Cmd + K` opens the command palette.
 
 ---
 
-## Two repositories
+## Where your work is kept
 
-| | |
+Everything is local. The app is static files; your browser is the database.
+
+| Where | What |
 |---|---|
-| **This repo** | the app itself |
-| **Project repo** | your add-on's data — save slots, preset inbox, exports, changelog. Configured in Settings; nothing is hardcoded. |
+| IndexedDB (`mmmmmmmmmmmmm` → `workspace`) | save slots, the preset inbox, the changelog |
+| IndexedDB (default store) | texture bytes, keyed by asset id |
+| localStorage | preferences and the slot to reopen on launch |
 
-There is no database. The project repo *is* the store, which means version
-history comes free with git.
+There is no server, no bucket and no account, so there is also nothing to
+configure before you start — and nothing anyone else can read.
+
+The flip side is that clearing site data for the origin deletes all of it.
+**Versions → Backup** writes a `.zip` holding `project.json`, every texture the
+project references and a copy of `CHANGELOG.md`; the same panel imports one
+back, which is also how a project moves to another browser or machine.
 
 ## Getting started
 
 ```bash
 npm install
 npm run dev          # the app on :5173
-npm run cf:dev       # or with the Worker + R2 binding
 npm test             # engine tests
-npm run build
+npm run build        # static site into dist/
+npm run preview      # serve the build
 ```
 
-Then, in **Settings**:
-
-1. A fine-grained GitHub token with **contents: write** on your project repo,
-   plus the owner, repo name and branch. Press *Test connection*.
-2. Your project namespace (`mmm` by default) — it prefixes every identifier and
-   must not collide with `minecraft:`.
-3. A Worker passphrase, if the deployment sets one.
-
-Nothing is stored server-side: the token lives in your browser and is sent only
-to `api.github.com`.
-
-### Project repo layout
-
-The app creates this as it goes:
-
-```
-saves/<slot>/project.json     one complete add-on
-saves/<slot>/assets/*.png
-preset/*.json                 the inbox — applied files move to preset/applied/
-exports/*.mcaddon
-CHANGELOG.md
-```
+There is nothing to fill in before you can work. The one setting worth visiting
+is your project namespace (`mmm` by default) — it prefixes every identifier and
+must not collide with `minecraft:`.
 
 ## Deploying
 
-Cloudflare Workers with static assets:
+Cloudflare Pages, serving the built directory:
 
-```bash
-npx wrangler r2 bucket create mmmmmmmmmmmmm-assets
-npx wrangler secret put API_PASSPHRASE      # optional; without it /api runs open
-npm run cf:deploy
-```
+| Setting | Value |
+|---|---|
+| Build command | `npm run build` |
+| Output directory | `dist` |
 
-The Worker only proxies R2 through its binding — no R2 credential ever reaches
-the browser, and the CPU-heavy work (generating JSON, zipping the `.mcaddon`)
-stays in the page where there is no request budget to blow.
+`public/_redirects` sends every path to `index.html` so a deep link resolves,
+and `public/_headers` sets the long-lived cache for hashed assets. No Worker, no
+bindings, no secrets — the deployment is the same static files whether it is on
+Pages, a local `npm run preview`, or anything else that serves a directory.
 
 ## Documentation
 

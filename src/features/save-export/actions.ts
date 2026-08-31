@@ -1,40 +1,35 @@
 /**
- * Save, Export and load — the operations that cross the network.
+ * Save, Export and load.
  *
- * Both Save and Export insist on a changelog entry. That is deliberate: the
- * project repo is the history, and an entry written at the moment of the change
- * is worth more than one reconstructed later.
+ * Nothing here crosses the network. A Save writes the model into a slot in this
+ * browser's IndexedDB, an Export builds the `.mcaddon` in the page and hands it
+ * straight to the download. Both still insist on a changelog entry: the history
+ * is worth as much locally as it was in a repo, and a note written at the
+ * moment of the change beats one reconstructed later.
  */
 
 import { buildMcaddon, downloadBlob } from '../../core/export/mcaddon'
-import type { AssetRef } from '../../core/model/types'
-import { assets, projectRepo } from '../../state/services'
+import { normalizeSlotName } from '../../integrations/local/workspace'
+import { assets, workspace } from '../../state/services'
 import { useProject } from '../../state/project'
-import { useSettings, repoConfigured } from '../../state/settings'
-
-function requireRepo(): void {
-  if (!repoConfigured(useSettings.getState())) {
-    throw new Error(
-      'The project repository is not configured yet. Open Settings and fill in the GitHub token, owner, repo and branch.',
-    )
-  }
-}
-
-const readAssetBytes = (asset: AssetRef) => assets.read(asset)
+import { rememberSlot } from './session'
 
 export async function saveToSlot(slot: string, changelog: string): Promise<void> {
   const store = useProject.getState()
-  requireRepo()
   if (!changelog.trim()) throw new Error('Write a changelog entry before saving.')
 
-  store.setBusy(`Saving to ${slot}…`)
+  const name = normalizeSlotName(slot)
+  store.setBusy(`Saving to ${name}…`)
   try {
-    const result = await projectRepo.saveSlot(slot, store.project, changelog, readAssetBytes)
-    store.markSaved(slot)
+    const record = await workspace.writeSlot(name, store.project, changelog)
+    store.markSaved(name)
+    rememberSlot(name)
     store.toast({
       tone: 'success',
-      title: `Saved to ${slot}`,
-      detail: `${result.assetCount} textures committed · ${result.sha.slice(0, 7)}`,
+      title: `Saved to ${name}`,
+      detail: `${record.project.nodes.length} piece${
+        record.project.nodes.length === 1 ? '' : 's'
+      } of content · ${record.project.assets.length} textures · stored in this browser`,
     })
   } finally {
     store.setBusy(null)
@@ -43,21 +38,30 @@ export async function saveToSlot(slot: string, changelog: string): Promise<void>
 
 export async function loadSlot(slot: string): Promise<void> {
   const store = useProject.getState()
-  requireRepo()
 
   store.setBusy(`Loading ${slot}…`)
   try {
-    const loaded = await projectRepo.loadSave(slot)
-    // Warm the local cache so previews and export do not have to round-trip.
-    for (const [assetId, bytes] of loaded.assets) {
-      await assets.prime(assetId, bytes)
-    }
+    const loaded = await workspace.readSlot(slot)
+    if (!loaded) throw new Error(`Save "${slot}" is no longer in this browser's storage.`)
+
     store.replaceProject(loaded.project, slot)
+    rememberSlot(slot)
     store.toast({
       tone: 'success',
       title: `Opened ${slot}`,
-      detail: `${loaded.project.nodes.length} pieces of content, ${loaded.assets.size} textures`,
+      detail: `${loaded.project.nodes.length} pieces of content, ${loaded.project.assets.length} textures`,
     })
+  } finally {
+    store.setBusy(null)
+  }
+}
+
+export async function deleteSlot(slot: string): Promise<void> {
+  const store = useProject.getState()
+  store.setBusy(`Deleting ${slot}…`)
+  try {
+    await workspace.deleteSlot(slot)
+    store.toast({ tone: 'info', title: `Deleted ${slot}` })
   } finally {
     store.setBusy(null)
   }
@@ -67,17 +71,15 @@ export interface ExportOutcome {
   fileName: string
   entryCount: number
   bytes: number
-  committed: boolean
 }
 
 /**
  * Zips the pack in the browser, hands it to the user, then records the export
- * in the repo. The download happens first so a GitHub hiccup never costs you
- * the file you were after.
+ * in the local changelog. The download happens first so nothing can come
+ * between you and the file you were after.
  */
-export async function exportAddon(changelog: string, commit: boolean): Promise<ExportOutcome> {
+export async function exportAddon(changelog: string): Promise<ExportOutcome> {
   const store = useProject.getState()
-  if (commit) requireRepo()
   if (!changelog.trim()) throw new Error('Write a changelog entry before exporting.')
 
   store.setBusy('Building .mcaddon…')
@@ -96,28 +98,18 @@ export async function exportAddon(changelog: string, commit: boolean): Promise<E
 
     downloadBlob(built.blob, built.fileName)
 
-    let committed = false
-    if (commit) {
-      store.setBusy('Recording the export…')
-      const bytes = await built.blob.arrayBuffer()
-      await projectRepo.commitExport(built.fileName, bytes, changelog, store.project)
-      committed = true
-    }
+    await workspace.appendChangelog(`Export · ${built.fileName}`, changelog, [
+      `version ${store.project.version.join('.')}, namespace ${store.project.namespace}`,
+      `${built.entries.length} files, ${(built.bytes / 1024).toFixed(0)} KB`,
+    ])
 
     store.toast({
       tone: 'success',
       title: `Exported ${built.fileName}`,
-      detail: `${built.entries.length} files · ${(built.bytes / 1024).toFixed(0)} KB${
-        committed ? ' · committed to the repo' : ''
-      }`,
+      detail: `${built.entries.length} files · ${(built.bytes / 1024).toFixed(0)} KB`,
     })
 
-    return {
-      fileName: built.fileName,
-      entryCount: built.entries.length,
-      bytes: built.bytes,
-      committed,
-    }
+    return { fileName: built.fileName, entryCount: built.entries.length, bytes: built.bytes }
   } finally {
     store.setBusy(null)
   }

@@ -1,0 +1,4 @@
+# Everything the app stores stays in the browser, so nothing here needs a
+# caching or credential policy beyond the static-asset basics.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

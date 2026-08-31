@@ -17,9 +17,6 @@ export interface ChangelogDialogProps {
   open: boolean
   intent: ChangelogIntent
   slot: string
-  /** Extra option shown for exports. */
-  commitExport: boolean
-  onCommitExportChange(value: boolean): void
   onSlotChange(value: string): void
   onCancel(): void
   onConfirm(changelog: string): Promise<void>
@@ -29,8 +26,6 @@ export function ChangelogDialog({
   open,
   intent,
   slot,
-  commitExport,
-  onCommitExportChange,
   onSlotChange,
   onCancel,
   onConfirm,
@@ -98,7 +93,7 @@ export function ChangelogDialog({
                 </h2>
                 <p className="text-[11px] text-ink-300">
                   {intent === 'save'
-                    ? 'Commits the model, its textures and this note to the project repo.'
+                    ? 'Stores the model and this note in this browser, under the slot name below.'
                     : 'Builds the archive in your browser and records it in the changelog.'}
                 </p>
               </div>
@@ -147,18 +142,6 @@ export function ChangelogDialog({
                   className="w-full resize-y rounded-md border border-ink-600 bg-ink-900 px-2.5 py-2 text-xs leading-relaxed text-ink-50 placeholder:text-ink-400 focus:border-accent-500 focus:outline-none"
                 />
               </label>
-
-              {intent === 'export' ? (
-                <label className="flex cursor-pointer items-center gap-2 text-[11px] text-ink-200">
-                  <input
-                    type="checkbox"
-                    checked={commitExport}
-                    onChange={(event) => onCommitExportChange(event.target.checked)}
-                    className="size-3.5 accent-[var(--color-accent-500)]"
-                  />
-                  Also commit the .mcaddon to the project repo
-                </label>
-              ) : null}
 
               {error ? (
                 <div
