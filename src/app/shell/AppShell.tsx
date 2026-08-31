@@ -21,6 +21,8 @@ import { FileExplorer } from '../../features/explorer/FileExplorer'
 import { PresetInbox } from '../../features/presets/PresetInbox'
 import { PresetLibrary } from '../../features/presets/PresetLibrary'
 import { SettingsView } from '../../features/settings/SettingsView'
+import { TextureMakerHost } from '../../features/texture-maker/TextureMakerHost'
+import { TextureStudio } from '../../features/texture-maker/TextureStudio'
 import { VersionsView } from '../../features/versions/VersionsView'
 import { useProject } from '../../state/project'
 import { useUi, type SideView } from '../../state/ui'
@@ -28,6 +30,7 @@ import { useUi, type SideView } from '../../state/ui'
 const TITLES: Record<SideView, string> = {
   content: 'Content',
   files: 'Generated files',
+  textures: 'Textures',
   presets: 'Preset library',
   inbox: 'Preset inbox',
   versions: 'Versions',
@@ -40,6 +43,8 @@ function SidePanelBody({ view }: { view: SideView }) {
       return <ContentExplorer />
     case 'files':
       return <FileExplorer />
+    case 'textures':
+      return <TextureStudio />
     case 'presets':
       return <PresetLibrary />
     case 'inbox':
@@ -157,6 +162,7 @@ export function AppShell() {
 
       <StatusBar />
       <CommandPalette />
+      <TextureMakerHost />
       <Toasts />
     </div>
   )

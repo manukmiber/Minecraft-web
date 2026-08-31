@@ -17,6 +17,8 @@ import {
   createProject,
   removeNode as removeNodeFromProject,
   setOverride as setOverrideOnProject,
+  touch as touchProject,
+  uniqueNodeName,
   upsertNode,
 } from '../core/model/project'
 import type { AssetRef, ContentNode, ProjectModel } from '../core/model/types'
@@ -44,6 +46,18 @@ export interface Toast {
   tone: 'info' | 'success' | 'warning' | 'error'
   title: string
   detail?: string
+}
+
+export interface CreateContentOptions {
+  /** Identifier name to use instead of one slugified from the display name. */
+  name?: string
+  /** Field values merged over the kind's defaults. */
+  data?: Record<string, unknown>
+  /** Texture slot key -> asset id, for content created with its art already made. */
+  textures?: Record<string, string | null>
+  notes?: string
+  /** Defaults to true; the recipe builder creates items without stealing focus. */
+  open?: boolean
 }
 
 const HISTORY_LIMIT = 60
@@ -83,11 +97,16 @@ interface ProjectStore {
   newProject(): void
 
   addNode(kindId: string, displayName: string): ContentNode
+  createContent(kindId: string, displayName: string, options?: CreateContentOptions): ContentNode
   updateNode(nodeId: string, patch: Partial<ContentNode>): void
   updateNodeData(nodeId: string, key: string, value: unknown): void
   setNodeTexture(nodeId: string, slotKey: string, assetId: string | null): void
   deleteNode(nodeId: string): void
   registerAsset(asset: AssetRef): void
+  /** Re-points every texture slot using one asset at another. Returns the count. */
+  replaceAssetEverywhere(previousId: string, nextId: string): number
+  /** Drops an asset from the project, but only once nothing references it. */
+  forgetAsset(assetId: string): boolean
 
   setOverride(path: string, content: string | null): void
   applyPresetFile(preset: PresetFile): ApplyReport
@@ -185,9 +204,16 @@ export const useProject = create<ProjectStore>((set, get) => ({
   },
 
   addNode(kindId, displayName) {
-    const node = createNode(get().project, kindId, displayName)
+    return get().createContent(kindId, displayName)
+  },
+
+  createContent(kindId, displayName, options) {
+    const node = createNode(get().project, kindId, displayName, options?.data)
+    if (options?.name) node.name = uniqueNodeName(get().project, kindId, options.name)
+    if (options?.textures) node.textures = { ...node.textures, ...options.textures }
+    if (options?.notes) node.notes = options.notes
     get().commit(upsertNode(get().project, node))
-    get().openNode(node.id)
+    if (options?.open !== false) get().openNode(node.id)
     return node
   },
 
@@ -226,6 +252,38 @@ export const useProject = create<ProjectStore>((set, get) => ({
     // Assets are additive metadata; they do not count as a project edit on
     // their own, only once a slot actually references them.
     get().commit(addAssetToProject(get().project, asset), { silent: true })
+  },
+
+  replaceAssetEverywhere(previousId, nextId) {
+    const { project } = get()
+    let count = 0
+    const nodes = project.nodes.map((node) => {
+      const textures = { ...node.textures }
+      let touched = false
+      for (const [slotKey, assetId] of Object.entries(textures)) {
+        if (assetId === previousId) {
+          textures[slotKey] = nextId
+          touched = true
+          count++
+        }
+      }
+      return touched ? { ...node, textures, updatedAt: new Date().toISOString() } : node
+    })
+    if (count > 0) get().commit(touchProject({ ...project, nodes }))
+    return count
+  },
+
+  forgetAsset(assetId) {
+    const { project } = get()
+    const referenced = project.nodes.some((node) =>
+      Object.values(node.textures).some((id) => id === assetId),
+    )
+    if (referenced) return false
+    get().commit(
+      touchProject({ ...project, assets: project.assets.filter((a) => a.id !== assetId) }),
+      { silent: true },
+    )
+    return true
   },
 
   setOverride(path, content) {

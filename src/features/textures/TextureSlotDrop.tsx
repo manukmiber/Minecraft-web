@@ -1,21 +1,26 @@
 /**
- * A texture slot you can drop a PNG onto.
+ * A texture slot you can drop a PNG onto — or draw one for.
  *
  * Dropping validates the file, caches it locally, pushes it to R2 and points
  * the slot at it. From there the generator decides the atlas entry and the file
  * path — which is why nothing in this component knows or cares what a
  * `terrain_texture.json` is.
+ *
+ * The pencil opens the pixel editor on this exact slot and hands the finished
+ * PNG back through the same pipeline, so an uploaded texture and a drawn one
+ * are the same thing from here on.
  */
 
 import { useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ImageOff, Upload, X } from 'lucide-react'
+import { ImageOff, Pencil, Upload, X } from 'lucide-react'
 
 import { Badge, Spinner, cn } from '../../app/ui/primitives'
 import type { ContentNode } from '../../core/model/types'
 import type { TextureSlot } from '../../core/registry/types'
 import { assets as assetStore } from '../../state/services'
 import { useProject } from '../../state/project'
+import { openTextureMaker } from '../../state/textureMaker'
 import { useAssetUrl } from './useAssetUrl'
 
 export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: TextureSlot }) {
@@ -48,6 +53,23 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
     } finally {
       setUploading(false)
     }
+  }
+
+  const uvTemplate = slot.uvTemplate?.(node) ?? null
+  const size = slot.recommended ?? 16
+
+  const draw = () => {
+    openTextureMaker({
+      title: `${node.displayName} · ${slot.label}`,
+      size,
+      // A UV-mapped slot has to keep the sheet the model expects; a plain item
+      // or block icon is free to be any of the offered sizes.
+      sheet: uvTemplate ? { width: size, height: size } : null,
+      uvTemplate,
+      startFrom: asset,
+      fileName: `${node.name}_${slot.key}`,
+      onSave: (next) => setNodeTexture(node.id, slot.key, next.id),
+    })
   }
 
   return (
@@ -125,9 +147,23 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
             >
               <Upload size={15} />
               <span className="text-[9.5px]">Drop PNG</span>
+              <span className="text-[9px] text-ink-500">or draw it</span>
             </motion.div>
           )}
         </AnimatePresence>
+
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            draw()
+          }}
+          title={asset ? `Edit ${slot.label} in the texture maker` : `Draw ${slot.label} pixel by pixel`}
+          aria-label={asset ? `Edit ${slot.label}` : `Draw ${slot.label}`}
+          className="absolute bottom-1 left-1 rounded bg-ink-950/80 p-1 text-ink-300 opacity-0 transition-opacity hover:text-accent-400 focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <Pencil size={11} />
+        </button>
 
         {asset ? (
           <button

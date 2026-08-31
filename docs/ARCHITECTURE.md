@@ -27,6 +27,8 @@ src/core/          pure TypeScript, no React — testable on its own
   kinds/           the built-in kinds (block, crop, item, entity, recipe)
   generators/      the emit pass, geometry and animation builders
   presets/         preset format, validation, apply
+  recipes/         crafting stations: slot layouts and the tags they emit
+  data/            the vanilla identifier catalogue the item browser offers
   schema/          JSON-schema bindings for the code editor
   vfs/             virtual file tree
   export/          .mcaddon packaging (JSZip)
@@ -39,6 +41,8 @@ src/integrations/  the outside world
 src/state/         zustand stores (project, settings, ui) and the service singletons
 src/app/           shell: activity bar, tabs, palette, status bar, panels
 src/features/      the panels and editors
+  recipes/         the station builder, item browser and new-result form
+  texture-maker/   the pixel editor, its PNG encoder and the texture panel
 src/presets/       shipped preset data (the farming batch)
 worker/            the Cloudflare Worker: R2 proxy and nothing else
 ```
@@ -58,6 +62,45 @@ So adding a new type of content — a structure, a biome, a particle — is one
 entry in `src/core/kinds/`, not a new screen. The farming batch is proof: it is
 data (`src/presets/farming/`) laid over the generic kinds, with no special cases
 anywhere in the engine.
+
+## Two registries, same idea
+
+`ContentKind` is not the only thing the UI is derived from. Crafting stations
+are declared the same way, in `src/core/recipes/stations.ts`:
+
+| Declaration | Drives |
+|---|---|
+| `label`, `icon`, `hint` | the tab in the recipe builder |
+| `layout` | which slots are drawn, and how many |
+| `tags` | the `tags` array in the generated recipe |
+
+The built-ins mirror the vanilla stations. The rest are computed from the
+project itself: any block with `isCraftingStation` and a `craftingTag` becomes a
+station, so a mod's own cooking pot gets a tab the moment it is given a tag —
+and loses it again if the tag is cleared. A recipe stores `node:<block id>`
+rather than the tag, so renaming the block or changing its tag cannot orphan the
+recipes made at it.
+
+Ingredient cells live in a fixed 3x3 coordinate space whatever the station's
+size, and a smaller station reads the top-left corner of it. That is why moving
+a recipe from a 2x2 pot to the crafting table and back finds the ingredients
+where you left them, and why cells outside the current station are ignored by
+the generator rather than smuggled into the pattern.
+
+## Drawing a texture is not a second pipeline
+
+The pixel editor ends at `AssetStore.importFile` — the same call a dropped PNG
+makes. From that point a drawn texture is indistinguishable from an uploaded
+one: same IndexedDB cache, same R2 upload, same commit into the project repo,
+same atlas registration by the emit pass. There is no "drawn texture" concept
+anywhere below the editor, which is what keeps the two ways of getting a PNG
+from drifting apart.
+
+The one thing the editor does not delegate is writing the PNG. Encoding through
+a `<canvas>` premultiplies alpha and shifts the colour of semi-transparent
+pixels, so `features/texture-maker/png.ts` writes the file directly — stored
+deflate blocks, exact bytes. Decoding, which has no such hazard, is left to the
+browser.
 
 ## Two-way editing, honestly
 

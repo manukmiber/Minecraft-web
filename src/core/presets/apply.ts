@@ -135,15 +135,27 @@ export function applyPreset(project: ProjectModel, preset: PresetFile): ApplyRep
         continue
       }
 
-      if (field.type === 'recipe-grid' && Array.isArray(value)) {
-        node.data[field.key] = value.map((cell) => {
-          if (!isRef(cell)) return cell
-          const target = findTarget(cell)
-          if (target) return `${project.namespace}:${target.name}`
-          unresolved.push(`${node.kind}:${node.name}.${field.key} -> ${cell}`)
-          return ''
-        })
+    }
+
+    // Visual builders own several data keys that no field declares one by one —
+    // the recipe station writes the grid, the cooking input and the fuel slot.
+    // Anything left holding a reference after the declared fields have been
+    // resolved is an identifier reference too, so it is resolved the same way
+    // rather than shipping "#item:rice" into a pattern key.
+    const declared = new Set(kind.fields.map((field) => field.key))
+    for (const [key, value] of Object.entries(node.data)) {
+      if (declared.has(key)) continue
+
+      const resolveOne = (entry: unknown): unknown => {
+        if (!isRef(entry)) return entry
+        const target = findTarget(entry)
+        if (target) return `${project.namespace}:${target.name}`
+        unresolved.push(`${node.kind}:${node.name}.${key} -> ${entry}`)
+        return ''
       }
+
+      if (isRef(value)) node.data[key] = resolveOne(value)
+      else if (Array.isArray(value)) node.data[key] = value.map(resolveOne)
     }
   }
 
