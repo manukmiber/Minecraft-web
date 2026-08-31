@@ -7,7 +7,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type SideView = 'content' | 'files' | 'presets' | 'inbox' | 'versions' | 'settings'
+export type SideView =
+  | 'content'
+  | 'files'
+  | 'textures'
+  | 'presets'
+  | 'inbox'
+  | 'versions'
+  | 'settings'
 
 interface UiState {
   sideView: SideView

@@ -17,7 +17,7 @@ import type { FieldSpec } from '../../core/registry/types'
 import { isValidName } from '../../core/util/id'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
-import { RecipeGridField } from './RecipeGridField'
+import { RecipeStationField } from '../recipes/RecipeStationField'
 
 export function FormEditor({ node }: { node: ContentNode }) {
   const { project, updateNode, updateNodeData } = useProject()
@@ -167,7 +167,7 @@ function Field({
   node: ContentNode
   onChange(value: unknown): void
 }) {
-  const { project } = useProject()
+  const { project, updateNode } = useProject()
   const value = node.data[field.key]
   const error = field.validate ? field.validate(value, node.data) : null
   const id = `${node.id}-${field.key}`
@@ -433,11 +433,13 @@ function Field({
         )
       }
 
-      case 'recipe-grid':
+      case 'recipe-station':
+        // The only field that owns more than its own key: the builder writes
+        // the station, the grid, the cooking slots and the result together.
         return (
-          <RecipeGridField
-            value={Array.isArray(value) ? (value as string[]) : []}
-            onChange={onChange}
+          <RecipeStationField
+            node={node}
+            onPatch={(patch) => updateNode(node.id, { data: { ...node.data, ...patch } })}
           />
         )
 

@@ -8,6 +8,7 @@
  * adding one entry here, not touching the UI.
  */
 
+import type { UvRegion } from '../generators/geometry'
 import type { ContentNode, ProjectModel } from '../model/types'
 import type { TargetProfile } from '../targets/profiles'
 import type { VirtualFile } from '../vfs/types'
@@ -29,8 +30,8 @@ export type FieldType =
   | 'block-ref'
   /** Ordered list of growth stages, each with its own texture slot. */
   | 'stage-list'
-  /** The interactive 3x3 crafting grid. */
-  | 'recipe-grid'
+  /** The visual crafting-station builder: tabs, slots, item browser, preview. */
+  | 'recipe-station'
   /** Free list of strings (families, tags, ...). */
   | 'string-list'
 
@@ -70,6 +71,12 @@ export interface TextureSlot {
   required?: boolean
   /** Recommended square size, surfaced as a warning not an error. */
   recommended?: number
+  /**
+   * Named regions of the texture sheet, for slots whose PNG is a UV map rather
+   * than a plain square — an entity skin, say. The pixel editor draws them as a
+   * template so you can see which patch is the head and which is a wing.
+   */
+  uvTemplate?: (node: ContentNode) => UvRegion[] | null
 }
 
 export type PreviewSpec =
