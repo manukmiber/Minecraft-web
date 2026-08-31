@@ -148,9 +148,31 @@ Cloudflare Workers with static assets:
 
 ```bash
 npx wrangler r2 bucket create mmmmmmmmmmmmm-assets
+npx wrangler r2 bucket create mmmmmmmmmmmmm-assets-preview   # for `wrangler dev --remote`
 npx wrangler secret put API_PASSPHRASE      # optional; without it /api runs open
 npm run cf:deploy
 ```
+
+`cf:deploy` builds first on purpose: `wrangler deploy` uploads `./dist` as the
+Worker's asset store, so deploying without a build leaves the previous page —
+or the starter placeholder — live at the workers.dev host.
+
+The Worker name in `wrangler.jsonc` is the workers.dev hostname
+(`minecraft-web` → `minecraft-web.<subdomain>.workers.dev`). Change it and you
+publish a second Worker while the old host keeps serving stale content.
+
+Pushes to `main` also deploy on their own: the repo is connected to Cloudflare
+Workers Builds, which runs the build and `wrangler deploy` for the
+`minecraft-web` Worker. When that build is red the live host keeps serving
+whatever was deployed last, so a red Workers Builds check means the site is
+stale, not just the branch.
+
+Deploys are `main` only. *Builds for non-production branches* is off in
+**Settings > Build > Branch control**, so pull requests get no build, no
+preview deployment and no bot comment; `preview_urls: false` in
+`wrangler.jsonc` backs that up on the Cloudflare side. Branches are verified
+locally instead — `npm test`, `npm run build`, and
+`npx wrangler deploy --dry-run` to check the config and bindings.
 
 The Worker only proxies R2 through its binding — no R2 credential ever reaches
 the browser, and the CPU-heavy work (generating JSON, zipping the `.mcaddon`)
