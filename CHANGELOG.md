@@ -45,9 +45,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Deleting a crop now also removes it from any biome that scattered it, the same
   way it already cleared single references.
 
-## 0.1.0
+## Earlier
 
-Initial build: the project model and generation pass, block / crop / item /
-entity / recipe kinds, the wizard and code editors, the 3D preview, texture
-drop zones with R2 storage, GitHub-backed save slots and preset inbox, and
-`.mcaddon` export.
+This file starts here; everything before it — the project model and generation
+pass, the content kinds, the wizard and code editors, the 3D preview, the
+station-based recipe builder, the pixel editor, GitHub-backed saves and
+`.mcaddon` export — is in the git log.

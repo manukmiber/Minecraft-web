@@ -137,6 +137,15 @@ export const itemKind: ContentKind = {
       help: 'Makes this item place the chosen block — how seeds work.',
     },
     {
+      key: 'placeOn',
+      label: 'Only placeable on',
+      type: 'string-list',
+      group: 'Behaviour',
+      when: (data) => str(data, 'placesBlock') !== '',
+      placeholder: 'minecraft:farmland',
+      help: 'Blocks this item may be used on. Leave empty to place it anywhere — a seed wants minecraft:farmland here.',
+    },
+    {
       key: 'tags',
       label: 'Item tags',
       type: 'string-list',
@@ -163,6 +172,7 @@ export const itemKind: ContentKind = {
     handEquipped: false,
     glint: false,
     placesBlock: '',
+    placeOn: [],
     tags: [],
   }),
 
@@ -181,6 +191,7 @@ export const itemKind: ContentKind = {
       : undefined
 
     const tags = list(data, 'tags')
+    const placeOn = list(data, 'placeOn')
 
     const components = compact({
       // String shorthand is the current form (1.20.60+) and the one the
@@ -204,11 +215,13 @@ export const itemKind: ContentKind = {
         ? { duration: num(data, 'fuelDuration', 10) }
         : undefined,
       'minecraft:block_placer': placesBlockNode
-        ? {
+        ? compact({
             block: ctx.identifier(placesBlockNode),
-            // Without this the seed cannot be planted on farmland.
-            use_on: [{ name: 'minecraft:farmland' }],
-          }
+            // Omitted entirely when the list is empty, which is what lets the
+            // block be placed on anything. A seed restricts itself to farmland.
+            use_on:
+              placeOn.length > 0 ? placeOn.map((name) => ({ name })) : undefined,
+          })
         : undefined,
       'minecraft:tags': target.rules.tagsAsComponent && tags.length > 0 ? tags : undefined,
     })

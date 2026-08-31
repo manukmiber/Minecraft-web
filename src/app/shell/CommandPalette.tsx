@@ -17,6 +17,7 @@ import { BUILTIN_PRESET_PACKS } from '../../presets/farming'
 const PANELS: Array<{ view: SideView; label: string }> = [
   { view: 'content', label: 'Content' },
   { view: 'files', label: 'Generated files' },
+  { view: 'textures', label: 'Textures' },
   { view: 'presets', label: 'Preset library' },
   { view: 'inbox', label: 'Preset inbox' },
   { view: 'versions', label: 'Versions' },

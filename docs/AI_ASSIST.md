@@ -148,6 +148,7 @@ Texture slots: `stage0` … `stageN-1`, plus `seed`.
 | `isFuel`, `fuelDuration` | boolean, number | |
 | `handEquipped`, `glint` | boolean | |
 | `placesBlock` | `#block:...` \| `#crop:...` | how seeds work |
+| `placeOn` | string[] | blocks the item may be used on. Empty means anywhere; a seed wants `minecraft:farmland` |
 | `tags` | string[] | |
 
 Texture slot: `main`.
@@ -217,21 +218,33 @@ Each entry in `plants`:
 
 ### `recipe`
 
+A recipe is authored against a **station**, which decides its slot layout and
+the `tags` it is written with.
+
 | Field | Type | Notes |
 |---|---|---|
-| `recipeType` | `shaped` \| `shapeless` \| `furnace` | |
-| `grid` | string[9] | row-major, `""` for an empty slot |
+| `station` | station id | `crafting_table`, `furnace`, `blast_furnace`, `smoker`, `campfire`, `soul_campfire`, `stonecutter`, or `node:<block node id>` for one of your own cookware blocks |
+| `recipeType` | `shaped` \| `shapeless` | grid stations only; the stonecutter is always shapeless |
+| `grid` | string[9] | row-major, `""` for an empty slot. Always nine entries: a station smaller than 3x3 reads the top-left corner of the same space, so widening it later finds the ingredients where you left them |
 | `trimPattern` | boolean | on, the arrangement can sit anywhere in the grid |
-| `input` | item identifier | furnace only |
+| `input` | item identifier | cooking stations only |
+| `fuel` | item identifier | cooking stations only, and **not** written into the recipe — Bedrock decides what burns from the fuel item's own `minecraft:fuel` component. The builder keeps it so it can warn when the item cannot burn |
 | `result` | item identifier or `#item:...` | |
 | `resultCount` | number | |
-| `stations` | string[] | vanilla tags: `crafting_table`, `furnace`, `smoker`, … |
 | `unlockItems` | string[] | reveals the recipe in the recipe book |
 | `priority` | number | lower wins when several recipes match |
 
-To make something "cooked", put a cookware **block** in one of the grid slots.
-There is no custom crafting UI; the recipe is an ordinary shaped recipe that
-happens to require the pan.
+`stations: string[]` from older presets is still understood: the first tag that
+matches a known station is used.
+
+There are two ways to make something "cooked":
+
+- put a cookware **block** in one of the grid slots — an ordinary crafting-table
+  recipe that happens to require the pan, and needs nothing else; or
+- give the block `isCraftingStation` and a `craftingTag`, which gives it its own
+  crafting screen in-game and its own tab in the builder. `craftingGridRows` and
+  `craftingGridCols` (1–3, default 3) narrow the shape a recipe may take; the
+  in-game screen is always 3x3.
 
 ---
 

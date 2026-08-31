@@ -353,6 +353,7 @@ const dishes: PresetFile = {
       displayName: 'Fried Egg',
       notes: 'Egg centre, oil to the right, pan below.',
       data: {
+        station: 'crafting_table',
         recipeType: 'shaped',
         grid: [
           '', '', '',
@@ -362,7 +363,6 @@ const dishes: PresetFile = {
         trimPattern: true,
         result: '#item:fried_egg',
         resultCount: 1,
-        stations: ['crafting_table'],
         unlockItems: ['minecraft:egg'],
       },
     },
@@ -387,6 +387,7 @@ const dishes: PresetFile = {
       displayName: 'Bowl of Rice',
       notes: 'Two rice over a bowl, cooked in the pot.',
       data: {
+        station: 'crafting_table',
         recipeType: 'shaped',
         grid: [
           '', '#item:rice', '',
@@ -396,7 +397,6 @@ const dishes: PresetFile = {
         trimPattern: true,
         result: '#item:rice_bowl',
         resultCount: 1,
-        stations: ['crafting_table'],
       },
     },
   ],

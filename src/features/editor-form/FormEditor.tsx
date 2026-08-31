@@ -19,7 +19,7 @@ import { projectBiomeTags } from '../../core/kinds/biome'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
 import { BiomeScatterField } from './BiomeScatterField'
-import { RecipeGridField } from './RecipeGridField'
+import { RecipeStationField } from '../recipes/RecipeStationField'
 
 /** Vanilla biome tags worth offering next to the project's own. */
 const VANILLA_BIOME_TAGS = [
@@ -188,7 +188,7 @@ function Field({
   node: ContentNode
   onChange(value: unknown): void
 }) {
-  const { project } = useProject()
+  const { project, updateNode } = useProject()
   const value = node.data[field.key]
   const error = field.validate ? field.validate(value, node.data) : null
   const id = `${node.id}-${field.key}`
@@ -454,11 +454,13 @@ function Field({
         )
       }
 
-      case 'recipe-grid':
+      case 'recipe-station':
+        // The only field that owns more than its own key: the builder writes
+        // the station, the grid, the cooking slots and the result together.
         return (
-          <RecipeGridField
-            value={Array.isArray(value) ? (value as string[]) : []}
-            onChange={onChange}
+          <RecipeStationField
+            node={node}
+            onPatch={(patch) => updateNode(node.id, { data: { ...node.data, ...patch } })}
           />
         )
 

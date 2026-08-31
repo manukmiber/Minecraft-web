@@ -153,7 +153,7 @@ Checked against the 1.26.x creator changelogs. Stable at the time of writing was
 | Biome, feature, feature rule | `1.13.0` | world generation still reads the 1.13.0 schema |
 | Client biome | `1.21.40` | biome colours moved out of `biomes_client.json` into per-biome resource files |
 | Fog | `1.16.100` | referenced by a client biome's `minecraft:fog_appearance` |
-| Recipe | `1.20.10` | recipe schema is conservative; supports `unlock` |
+| Recipe | `1.20.10` | recipe schema is conservative; supports `unlock`. `minecraft:recipe_shaped`, `_shapeless` and `_furnace` are all emitted from this one version |
 | Loot table | `1.20.10` | |
 | Client entity, render controller, animation, animation controller | `1.10.0` | |
 | Geometry | `1.16.0` | |
