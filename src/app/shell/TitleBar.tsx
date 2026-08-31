@@ -11,20 +11,15 @@ import { Command, Download, GitBranch, Redo2, Save, Undo2 } from 'lucide-react'
 import { Badge, Button, Spinner, cn } from '../ui/primitives'
 import { useProject } from '../../state/project'
 import { useUi } from '../../state/ui'
-import { useSettings, repoConfigured } from '../../state/settings'
 import { ChangelogDialog, type ChangelogIntent } from '../../features/save-export/ChangelogDialog'
 import { exportAddon, saveToSlot } from '../../features/save-export/actions'
 
 export function TitleBar() {
   const { project, dirty, busy, activeSlot, past, futureStack, undo, redo, commit } = useProject()
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
-  const settings = useSettings()
 
   const [dialog, setDialog] = useState<ChangelogIntent | null>(null)
   const [slot, setSlot] = useState(activeSlot)
-  const [commitExport, setCommitExport] = useState(true)
-
-  const configured = repoConfigured(settings)
 
   return (
     <>
@@ -115,12 +110,7 @@ export function TitleBar() {
             setSlot(activeSlot)
             setDialog('save')
           }}
-          disabled={!configured}
-          title={
-            configured
-              ? 'Commit this version to the project repo'
-              : 'Configure the project repository in Settings first'
-          }
+          title="Save this version into this browser's storage"
         >
           Save
         </Button>
@@ -140,14 +130,12 @@ export function TitleBar() {
         intent={dialog ?? 'save'}
         slot={slot}
         onSlotChange={setSlot}
-        commitExport={commitExport && configured}
-        onCommitExportChange={setCommitExport}
         onCancel={() => setDialog(null)}
         onConfirm={async (changelog) => {
           if (dialog === 'save') {
             await saveToSlot(slot.trim() || 'main', changelog)
           } else {
-            await exportAddon(changelog, commitExport && configured)
+            await exportAddon(changelog)
           }
           setDialog(null)
         }}

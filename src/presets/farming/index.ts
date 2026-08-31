@@ -2,7 +2,7 @@
  * The farming batch.
  *
  * These are plain preset files — the same format a hand-written preset in the
- * project repo uses. Nothing here is special-cased in the engine; every value
+ * inbox uses. Nothing here is special-cased in the engine; every value
  * below is a field the generic kinds already expose, which is the test that the
  * builder really is reusable for other themes.
  *
@@ -362,7 +362,7 @@ export const FARMING_PRESETS: PresetFile[] = [
 ]
 
 /**
- * Presets shipped with the app. Kept separate from the repo inbox so it is
+ * Presets shipped with the app. Kept separate from the drop-in inbox so it is
  * always obvious which came from where.
  */
 export const BUILTIN_PRESET_PACKS: Array<{ id: string; label: string; presets: PresetFile[] }> = [

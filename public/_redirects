@@ -1,0 +1,2 @@
+# Cloudflare Pages: the app is a single page, so every path serves index.html.
+/*    /index.html   200

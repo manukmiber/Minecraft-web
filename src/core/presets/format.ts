@@ -2,7 +2,7 @@
  * The preset file format.
  *
  * One format serves both the built-in farming batch and the files another tool
- * (Claude Code, say) drops into `preset/` in the project repo. Keeping them
+ * (Claude Code, say) writes for you to drop into the inbox. Keeping them
  * identical means anything you can ship as a built-in, you can also hand-write
  * — and vice versa. docs/AI_ASSIST.md is the human-readable version of this
  * file.

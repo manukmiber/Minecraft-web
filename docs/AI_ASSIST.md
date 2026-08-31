@@ -1,9 +1,9 @@
 # AI assist: generating presets for mmmmmmmmmmmmm
 
 Hand this file to Claude Code (or Qwen Code, or anything else) when you want it
-to build something the wizard does not cover yet. Everything it produces should
-land in `preset/` in the **project repo**, and it will show up in the app's
-Preset Inbox ready to apply.
+to build something the wizard does not cover yet. What it produces is a `.json`
+file on your disk; drop that file into the app's **Preset Inbox** — drag it onto
+the panel, or use the upload button — and it waits there until you apply it.
 
 The contract is deliberately small: a preset is one JSON file describing content
 in terms of the builder's own fields, and the builder turns that into a valid
@@ -14,20 +14,22 @@ to — see [Escape hatch](#escape-hatch-shipping-raw-files) at the end.
 
 ## Where files go
 
+The app stores everything in the browser, so there is no folder for a tool to
+write into and no live model on disk to read. The exchange is by file:
+
 ```
-<project repo>/
-├── preset/                     ← write new presets HERE
-│   ├── my-thing.preset.json
-│   └── applied/                ← the app moves them here once applied
-├── saves/<slot>/project.json   ← the live model; read it, do not edit it
-├── saves/<slot>/assets/*.png
-├── exports/
-└── CHANGELOG.md
+anywhere on disk
+└── my-thing.preset.json   ← write this, then drop it on the Preset Inbox
 ```
 
-Read `saves/<slot>/project.json` to see what already exists — its `namespace`,
-its `nodes`, and which names are taken. Do **not** edit that file directly: the
-app owns it, and a hand-edit is lost the next time it saves.
+To see what the project already contains — its `namespace`, its `nodes`, and
+which names are taken — export a backup from **Versions → Backup**. The zip
+holds `project.json` in exactly the shape described in `docs/SCHEMA.md`. Read
+it; do not try to write it back. A preset is the supported way in, and it says
+what to add rather than replacing the whole model.
+
+Applying a preset only changes the open project. Nothing is on disk until the
+user saves the slot, so end by telling them to press **Save**.
 
 ---
 

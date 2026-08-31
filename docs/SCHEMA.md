@@ -47,9 +47,7 @@ friendlier document; this one is the specification.
       "size": 1024,
       "width": 64,
       "height": 64,
-      "r2Key": "proj_…/asset_….png",   // null until uploaded
-      "repoPath": null,
-      "addedAt": "…"
+      "addedAt": "…"                   // bytes live in IndexedDB under this id
     }
   ],
 

@@ -11,9 +11,7 @@
     "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false || tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "cf:dev": "wrangler dev",
-    "cf:deploy": "npm run build && wrangler deploy"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -44,7 +42,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260702.1",
     "@tailwindcss/vite": "^4.0.9",
     "@types/node": "^22.13.5",
     "@types/react": "^18.3.18",
@@ -55,7 +52,6 @@
     "tailwindcss": "^4.0.9",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
-    "vitest": "^3.0.7",
-    "wrangler": "^3.109.2"
+    "vitest": "^3.0.7"
   }
 }

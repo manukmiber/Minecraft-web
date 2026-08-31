@@ -1,9 +1,9 @@
 /**
  * `.mcaddon` packaging.
  *
- * Runs entirely in the browser. A Worker would be the obvious place for this,
- * but zipping a pack with textures blows past the CPU budget of an edge
- * request — and there is nothing the server needs to see anyway.
+ * Runs entirely in the browser, like everything else in this app: the textures
+ * are already here in IndexedDB, so zipping them where they sit avoids an
+ * upload, a server and a round trip.
  */
 
 import JSZip from 'jszip'
@@ -13,7 +13,7 @@ import { emitProject } from '../generators/emit'
 import type { EmitProblem } from '../generators/emit'
 import { serializeBody } from '../vfs/types'
 
-/** Resolves an asset id to its bytes. Backed by IndexedDB, then R2. */
+/** Resolves an asset id to its bytes. Backed by IndexedDB. */
 export type AssetResolver = (assetId: string) => Promise<ArrayBuffer | null>
 
 export interface ExportResult {
