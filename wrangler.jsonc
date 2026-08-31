@@ -1,6 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "mmmmmmmmmmmmm",
+  // Must match the deployed Worker, i.e. the host that serves the app:
+  // https://minecraft-web.<subdomain>.workers.dev. Renaming this deploys a
+  // second, empty Worker and leaves the live one stale.
+  "name": "minecraft-web",
   "main": "worker/index.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],

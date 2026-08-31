@@ -1,0 +1,33 @@
+# Builds the SPA and publishes it together with the Worker, so the live
+# workers.dev host always matches main. Needs one repository secret:
+# CLOUDFLARE_API_TOKEN (Workers Scripts: Edit + Workers R2 Storage: Edit).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      # `wrangler deploy` uploads ./dist as the asset store, so the build has to
+      # run first — an unbuilt dist is what leaves the placeholder page live.
+      - run: npm run build
+
+      - name: Deploy Worker + assets
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

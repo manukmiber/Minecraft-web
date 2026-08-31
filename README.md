@@ -94,9 +94,22 @@ Cloudflare Workers with static assets:
 
 ```bash
 npx wrangler r2 bucket create mmmmmmmmmmmmm-assets
+npx wrangler r2 bucket create mmmmmmmmmmmmm-assets-preview   # for `wrangler dev --remote`
 npx wrangler secret put API_PASSPHRASE      # optional; without it /api runs open
 npm run cf:deploy
 ```
+
+`cf:deploy` builds first on purpose: `wrangler deploy` uploads `./dist` as the
+Worker's asset store, so deploying without a build leaves the previous page —
+or the starter placeholder — live at the workers.dev host.
+
+The Worker name in `wrangler.jsonc` is the workers.dev hostname
+(`minecraft-web` → `minecraft-web.<subdomain>.workers.dev`). Change it and you
+publish a second Worker while the old host keeps serving stale content.
+
+Pushes to `main` deploy through `.github/workflows/deploy.yml`, which needs a
+`CLOUDFLARE_API_TOKEN` repository secret with *Workers Scripts: Edit* and
+*Workers R2 Storage: Edit*.
 
 The Worker only proxies R2 through its binding — no R2 credential ever reaches
 the browser, and the CPU-heavy work (generating JSON, zipping the `.mcaddon`)
