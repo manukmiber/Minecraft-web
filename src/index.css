@@ -1,0 +1,157 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * The palette is VS Code Dark+ taken a shade deeper and pushed slightly cool,
+ * with a single warm accent so generated/dirty state reads instantly. Every
+ * surface is a token so the whole app can be re-skinned from this block.
+ */
+@theme {
+  --color-ink-950: #06080c;
+  --color-ink-900: #0b0e14;
+  --color-ink-850: #0f131b;
+  --color-ink-800: #131822;
+  --color-ink-750: #171d29;
+  --color-ink-700: #1c2330;
+  --color-ink-600: #242c3b;
+  --color-ink-500: #313b4d;
+  --color-ink-400: #4a5568;
+  --color-ink-300: #6b7688;
+  --color-ink-200: #98a2b3;
+  --color-ink-100: #c7cede;
+  --color-ink-50: #eef1f7;
+
+  --color-accent-500: #4aa3ff;
+  --color-accent-400: #6db6ff;
+  --color-accent-600: #2b7fd4;
+  --color-accent-glow: #4aa3ff33;
+
+  --color-mint-500: #37d6a5;
+  --color-amber-500: #f2b74a;
+  --color-rose-500: #ff6b81;
+  --color-violet-500: #a980ff;
+
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-panel: 10px;
+
+  --shadow-panel: 0 18px 40px -24px rgb(0 0 0 / 0.9);
+  --shadow-float: 0 24px 60px -20px rgb(0 0 0 / 0.75);
+
+  --ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Base ------------------------------------------------------------------ */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Scrollbars ------------------------------------------------------------ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-500) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-ink-500);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-400);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Utilities ------------------------------------------------------------- */
+
+@utility panel-surface {
+  background: color-mix(in oklab, var(--color-ink-850) 88%, transparent);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-panel);
+  backdrop-filter: blur(12px);
+}
+
+@utility grid-backdrop {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--color-ink-700) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-ink-700) 55%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+@utility focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-accent-500), 0 0 0 4px var(--color-accent-glow);
+}
+
+/* Text selection matches the accent so the app feels like one piece. */
+::selection {
+  background: color-mix(in oklab, var(--color-accent-500) 40%, transparent);
+  color: var(--color-ink-50);
+}
+
+/* Monaco needs a transparent backdrop to sit inside our panels cleanly. */
+.monaco-editor,
+.monaco-editor-background,
+.monaco-editor .margin {
+  background-color: transparent !important;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@utility shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-accent-500) 22%, transparent),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
