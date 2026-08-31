@@ -161,9 +161,11 @@ The Worker name in `wrangler.jsonc` is the workers.dev hostname
 (`minecraft-web` → `minecraft-web.<subdomain>.workers.dev`). Change it and you
 publish a second Worker while the old host keeps serving stale content.
 
-Pushes to `main` deploy through `.github/workflows/deploy.yml`, which needs a
-`CLOUDFLARE_API_TOKEN` repository secret with *Workers Scripts: Edit* and
-*Workers R2 Storage: Edit*.
+Pushes to `main` also deploy on their own: the repo is connected to Cloudflare
+Workers Builds, which runs the build and `wrangler deploy` for the
+`minecraft-web` Worker and reports back as a check on every pull request. When
+that check is red the live host keeps serving whatever was deployed last, so a
+red Workers Builds check means the site is stale, not just the branch.
 
 The Worker only proxies R2 through its binding — no R2 credential ever reaches
 the browser, and the CPU-heavy work (generating JSON, zipping the `.mcaddon`)
