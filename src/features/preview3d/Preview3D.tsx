@@ -19,6 +19,8 @@ import type { BoneSpec, GeometrySpec } from '../../core/generators/geometry'
 import type { ContentNode } from '../../core/model/types'
 import { getKind } from '../../core/registry/types'
 import { useProject } from '../../state/project'
+import { blockColor } from '../editor-form/LayerGridField'
+import { filledCells, gridSignature, voxelGrid } from '../../core/kinds/voxels'
 import { useAssetUrl } from '../textures/useAssetUrl'
 import { applyBoxUv } from './boxUv'
 import { makeMissingTexture, usePixelTexture } from './textures'
@@ -58,7 +60,7 @@ export function Preview3D({ node }: { node: ContentNode }) {
           // blocks tall and a crop laid out as a row of stages, so the camera is
           // framed from the model's real bounds. These are the fields that
           // change the silhouette, so a change to any of them re-frames.
-          signature={`${node.id}:${String(node.data.bodyPreset)}:${String(node.data.scale)}:${String(node.data.stages)}`}
+          signature={`${node.id}:${String(node.data.bodyPreset)}:${String(node.data.scale)}:${String(node.data.stages)}:${previewSignature(node)}`}
         >
           <Scene node={node} />
         </AutoFrame>
@@ -169,9 +171,22 @@ function Scene({ node }: { node: ContentNode }) {
       return <CropPreview node={node} slotPrefix={preview.slotPrefix} />
     case 'entity':
       return <EntityPreview node={node} slot={preview.textureSlot} />
+    case 'structure':
+      return <StructurePreview node={node} gridKey={preview.gridKey} />
     default:
       return null
   }
+}
+
+/**
+ * Anything else that changes a node's silhouette and so needs the camera
+ * reframed. A painted structure grows as you work on it — without this the view
+ * stays framed on the first block and you end up inside the walls.
+ */
+function previewSignature(node: ContentNode): string {
+  const preview = getKind(node.kind)?.preview
+  if (preview?.type !== 'structure') return ''
+  return gridSignature(voxelGrid(node.data[preview.gridKey]))
 }
 
 /** Resolves a texture slot to a blob URL through the project's asset list. */
@@ -289,6 +304,94 @@ function CropStage({
         <planeGeometry args={[1.4, 1]} />
       </mesh>
     </group>
+  )
+}
+
+/**
+ * The painted structure, as it will actually generate.
+ *
+ * Cells are grouped by block so each distinct block is one draw and one hook —
+ * the texture lookup cannot be done per cell without calling hooks in a loop —
+ * and blocks with no texture in this project fall back to the same colour the
+ * layer painter uses, so the two views stay recognisably the same build.
+ */
+function StructurePreview({ node, gridKey }: { node: ContentNode; gridKey: string }) {
+  const namespace = useProject((s) => s.project.namespace)
+
+  const groups = useMemo(() => {
+    const grid = voxelGrid(node.data[gridKey])
+    const [width, , depth] = grid.size
+    const byBlock = new Map<string, Array<[number, number, number]>>()
+
+    for (const cell of filledCells(grid)) {
+      const list = byBlock.get(cell.block) ?? []
+      // Centred on the footprint, matching the default anchor, and sitting on
+      // the grid floor rather than straddling it.
+      list.push([cell.x - (width - 1) / 2, cell.y + 0.5, cell.z - (depth - 1) / 2])
+      byBlock.set(cell.block, list)
+    }
+    return [...byBlock.entries()]
+  }, [node.data, gridKey])
+
+  if (groups.length === 0) {
+    return (
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color="#2b3446" transparent opacity={0.6} />
+      </mesh>
+    )
+  }
+
+  return (
+    <group>
+      {groups.map(([block, positions]) => (
+        <StructureBlocks key={block} block={block} positions={positions} namespace={namespace} />
+      ))}
+    </group>
+  )
+}
+
+function StructureBlocks({
+  block,
+  positions,
+  namespace,
+}: {
+  block: string
+  positions: Array<[number, number, number]>
+  namespace: string
+}) {
+  // Only this project's own blocks can be textured — vanilla PNGs are not in
+  // the pack — so anything else is drawn as its painter colour.
+  const project = useProject((s) => s.project)
+  const owner =
+    block.startsWith(`${namespace}:`)
+      ? project.nodes.find(
+          (candidate) =>
+            `${namespace}:${candidate.name}` === block &&
+            (candidate.kind === 'block' || candidate.kind === 'crop'),
+        )
+      : undefined
+  const assetId = owner ? (owner.textures.main ?? owner.textures.stage0 ?? null) : null
+  const asset = assetId ? (project.assets.find((a) => a.id === assetId) ?? null) : null
+  const texture = usePixelTexture(useAssetUrl(asset))
+
+  const material = useMemo(
+    () =>
+      texture
+        ? new THREE.MeshLambertMaterial({ map: texture })
+        : new THREE.MeshLambertMaterial({ color: new THREE.Color(blockColor(block)) }),
+    [texture, block],
+  )
+  useEffect(() => () => material.dispose(), [material])
+
+  return (
+    <>
+      {positions.map((position, index) => (
+        <mesh key={index} position={position} material={material} castShadow receiveShadow>
+          <boxGeometry args={[1, 1, 1]} />
+        </mesh>
+      ))}
+    </>
   )
 }
 

@@ -63,14 +63,7 @@ export function createNode(
   if (!kind) throw new Error(`Unknown content kind: ${kindId}`)
 
   const now = new Date().toISOString()
-  const base = slugify(displayName) || kindId
-  const taken = new Set(project.nodes.filter((n) => n.kind === kindId).map((n) => n.name))
-  let name = base
-  let suffix = 2
-  while (taken.has(name)) {
-    name = `${base}_${suffix}`
-    suffix += 1
-  }
+  const name = uniqueNodeName(project, kindId, slugify(displayName) || kindId)
 
   return {
     id: nodeId(kindId),
@@ -82,6 +75,23 @@ export function createNode(
     createdAt: now,
     updatedAt: now,
   }
+}
+
+/**
+ * A free identifier name for a kind: the requested one, or the same with a
+ * numeric suffix. Exported because content created outside the wizard — the
+ * recipe builder's "new result item" form — asks for a specific name.
+ */
+export function uniqueNodeName(project: ProjectModel, kindId: string, requested: string): string {
+  const base = slugify(requested) || kindId
+  const taken = new Set(project.nodes.filter((n) => n.kind === kindId).map((n) => n.name))
+  let name = base
+  let suffix = 2
+  while (taken.has(name)) {
+    name = `${base}_${suffix}`
+    suffix += 1
+  }
+  return name
 }
 
 export function touch(project: ProjectModel): ProjectModel {
@@ -112,6 +122,16 @@ export function removeNode(project: ProjectModel, id: string): ProjectModel {
         if (field.type === 'node-ref' && data[field.key] === id) {
           data[field.key] = ''
           changed = true
+        }
+        // A biome's plant list holds node ids too, so a deleted crop has to
+        // drop out of every biome that scattered it.
+        if (field.type === 'biome-scatter' && Array.isArray(data[field.key])) {
+          const entries = data[field.key] as Array<{ plant?: unknown }>
+          const kept = entries.filter((entry) => entry?.plant !== id)
+          if (kept.length !== entries.length) {
+            data[field.key] = kept
+            changed = true
+          }
         }
       }
       return changed ? { ...n, data } : n

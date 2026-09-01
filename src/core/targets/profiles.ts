@@ -19,6 +19,10 @@ export interface FormatVersions {
   spawnRules: string
   recipe: string
   lootTable: string
+  /** World generation: `biomes/`, `features/` and `feature_rules/`. */
+  biome: string
+  feature: string
+  featureRules: string
   /** Resource pack */
   clientEntity: string
   renderController: string
@@ -26,6 +30,8 @@ export interface FormatVersions {
   animationController: string
   geometry: string
   attachable: string
+  clientBiome: string
+  fog: string
   /** Texture atlases use a plain string version rather than a format_version. */
   itemAtlas: string
   terrainAtlas: string
@@ -84,12 +90,17 @@ export const TARGET_PROFILES: TargetProfile[] = [
       spawnRules: '1.8.0',
       recipe: '1.20.10',
       lootTable: '1.20.10',
+      biome: '1.13.0',
+      feature: '1.13.0',
+      featureRules: '1.13.0',
       clientEntity: '1.10.0',
       renderController: '1.10.0',
       animation: '1.10.0',
       animationController: '1.10.0',
       geometry: '1.16.0',
       attachable: '1.10.0',
+      clientBiome: '1.21.40',
+      fog: '1.16.100',
       itemAtlas: '1.0.0',
       terrainAtlas: '1.0.0',
     },
@@ -110,6 +121,7 @@ export const TARGET_PROFILES: TargetProfile[] = [
       'Blocks use the modern JSON parser (1.26.20): tags live in minecraft:tags.',
       'Items must declare at least one component or they fail to register (1.26.30).',
       'Entity goal ranges must be {min,max} objects under the 1.26.40 strict schema.',
+      'Biomes, features and feature rules still read the 1.13.0 schema; biome colours moved to resource-pack client biomes in 1.21.40.',
     ],
   },
   {
@@ -125,12 +137,17 @@ export const TARGET_PROFILES: TargetProfile[] = [
       spawnRules: '1.8.0',
       recipe: '1.20.10',
       lootTable: '1.20.10',
+      biome: '1.13.0',
+      feature: '1.13.0',
+      featureRules: '1.13.0',
       clientEntity: '1.10.0',
       renderController: '1.10.0',
       animation: '1.10.0',
       animationController: '1.10.0',
       geometry: '1.16.0',
       attachable: '1.10.0',
+      clientBiome: '1.21.40',
+      fog: '1.16.100',
       itemAtlas: '1.0.0',
       terrainAtlas: '1.0.0',
     },

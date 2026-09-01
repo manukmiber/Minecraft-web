@@ -52,7 +52,7 @@ app owns it, and a hand-edit is lost the next time it saves.
 
 ```jsonc
 {
-  "kind": "entity",              // one of: block, crop, item, entity, recipe
+  "kind": "entity",              // block, crop, item, entity, recipe or biome
   "name": "crow",                // identifier name part — ^[a-z][a-z0-9_]*$
   "displayName": "Crow",         // human name; goes into the .lang file
   "notes": "Optional note shown in the inspector",
@@ -148,6 +148,7 @@ Texture slots: `stage0` … `stageN-1`, plus `seed`.
 | `isFuel`, `fuelDuration` | boolean, number | |
 | `handEquipped`, `glint` | boolean | |
 | `placesBlock` | `#block:...` \| `#crop:...` | how seeds work |
+| `placeOn` | string[] | blocks the item may be used on. Empty means anywhere; a seed wants `minecraft:farmland` |
 | `tags` | string[] | |
 
 Texture slot: `main`.
@@ -181,23 +182,154 @@ Texture slot: `main`.
 
 Texture slot: `main` (must match the UV layout of the chosen body preset).
 
-### `recipe`
+### `biome`
 
 | Field | Type | Notes |
 |---|---|---|
-| `recipeType` | `shaped` \| `shapeless` \| `furnace` | |
-| `grid` | string[9] | row-major, `""` for an empty slot |
+| `placement` | `standalone` \| `nested` | `nested` scatters into an existing biome instead of generating a new one |
+| `hostBiome` | biome tag | nested only, e.g. `plains`, `swamp` |
+| `rarity` | number 1–20 | standalone only; weight against vanilla biomes in the same climate |
+| `temperature` | number 0–2 | below 0.15 accumulates snow; above 1.0 no rain falls |
+| `downfall` | number 0–1 | |
+| `grassColor`, `foliageColor`, `waterColor`, `fogColor` | `#rrggbb` | written to the resource-pack client biome and fog definition |
+| `topBlock`, `midBlock` | block identifier | surface materials |
+| `heightNoise` | `default` \| `lowlands` \| `swamp` \| `river` \| `beach` \| `mountains` | terrain shape |
+| `plants` | object[] | see below |
+| `scatterAttempts` | number 1–48 | planting attempts per chunk |
+| `scatterChance` | number 5–100 | percent chance each attempt succeeds |
+| `farmlandBiome` | boolean | adds the shared `<namespace>_farmland` tag |
+| `crowEntity`, `scarecrowEntity` | `#entity:...` | references only — their own fields still define them |
+| `crowDensity` | number | 0 uses the estimate from the planting density |
+| `tags` | string[] | added to the generated tags; keep `overworld` for a surface biome |
+
+Each entry in `plants`:
+
+```jsonc
+{
+  "plant": "#crop:rice_plant",   // node reference, resolved on apply
+  "weight": 8,                   // 1–20, relative to the other plants here
+  "placeOn": [],                 // empty inherits the crop's own plantOn
+  "needsWater": true,            // requires an adjacent water block
+  "maturity": "ripe"             // "ripe" | "half" | "sprout"
+}
+```
+
+---
+
+### `recipe`
+
+A recipe is authored against a **station**, which decides its slot layout and
+the `tags` it is written with.
+
+| Field | Type | Notes |
+|---|---|---|
+| `station` | station id | `crafting_table`, `furnace`, `blast_furnace`, `smoker`, `campfire`, `soul_campfire`, `stonecutter`, or `node:<block node id>` for one of your own cookware blocks |
+| `recipeType` | `shaped` \| `shapeless` | grid stations only; the stonecutter is always shapeless |
+| `grid` | string[9] | row-major, `""` for an empty slot. Always nine entries: a station smaller than 3x3 reads the top-left corner of the same space, so widening it later finds the ingredients where you left them |
 | `trimPattern` | boolean | on, the arrangement can sit anywhere in the grid |
-| `input` | item identifier | furnace only |
+| `input` | item identifier | cooking stations only |
+| `fuel` | item identifier | cooking stations only, and **not** written into the recipe — Bedrock decides what burns from the fuel item's own `minecraft:fuel` component. The builder keeps it so it can warn when the item cannot burn |
 | `result` | item identifier or `#item:...` | |
 | `resultCount` | number | |
-| `stations` | string[] | vanilla tags: `crafting_table`, `furnace`, `smoker`, … |
 | `unlockItems` | string[] | reveals the recipe in the recipe book |
 | `priority` | number | lower wins when several recipes match |
 
-To make something "cooked", put a cookware **block** in one of the grid slots.
-There is no custom crafting UI; the recipe is an ordinary shaped recipe that
-happens to require the pan.
+`stations: string[]` from older presets is still understood: the first tag that
+matches a known station is used.
+
+There are two ways to make something "cooked":
+
+- put a cookware **block** in one of the grid slots — an ordinary crafting-table
+  recipe that happens to require the pan, and needs nothing else; or
+- give the block `isCraftingStation` and a `craftingTag`, which gives it its own
+  crafting screen in-game and its own tab in the builder. `craftingGridRows` and
+  `craftingGridCols` (1–3, default 3) narrow the shape a recipe may take; the
+  in-game screen is always 3x3.
+
+
+### World placement — shared by `scatter`, `tree` and `structure`
+
+All three world-generation kinds carry the same placement block, which becomes
+the feature rule. Omit `worldPlace` (or set it to `false`) and no rule is
+written at all — the feature is still generated, just never placed on its own.
+
+| Field | Type | Notes |
+|---|---|---|
+| `worldPlace` | boolean | off writes the feature but no rule |
+| `scatterPercent` | number 0–100 | chance a single attempt places anything |
+| `iterations` | number 1–256 | attempts per chunk; density ≈ attempts × chance |
+| `placementPass` | `surface_pass` \| `underground_pass` \| `final_pass` \| … | see `PLACEMENT_PASS_OPTIONS` |
+| `yMode` | `surface` \| `uniform` \| `triangle` \| `fixed` | `surface` omits `y` so the game follows terrain height |
+| `yAnchor` | `absolute` \| `above_bottom` \| `below_top` | how `yMin`/`yMax` are measured |
+| `yMin`, `yMax` | number | the height band; `yMin` alone when `yMode` is `fixed` |
+| `biomeMatch` | `any` \| `anyOf` \| `allOf` \| `noneOf` | `any` writes no biome filter |
+| `biomeTags` | string[] | vanilla tags — `plains`, `jungle`, `nether`, … |
+| `biomeTagsCustom` | string[] | any other tag; merged with `biomeTags` |
+
+Biomes are matched on **tags**, not names — there is no biome-name test. Several
+tags under `anyOf` are wrapped in a single `any_of`, because a flat list would
+mean a biome carrying every tag at once.
+
+### `scatter`
+
+| Field | Type | Notes |
+|---|---|---|
+| `placeMode` | `blocks` \| `feature` | |
+| `blocks` | `{ id, weight }[]` | weights are relative, not percentages: 3 and 1 is 75% / 25% |
+| `featureRef` | feature identifier | used when `placeMode` is `feature` |
+| `patchSize` | number 1–64 | above 1 the placements clump into a patch |
+| `patchRadius` | number 1–8 | |
+| `mayPlaceOn` | string[] | becomes `may_attach_to.top`; empty allows any surface |
+| `mayReplace` | string[] | defaults to `["minecraft:air"]` |
+| `enforceSurvivability`, `enforcePlacement`, `randomizeRotation` | boolean | |
+
+One entry in `blocks` emits a `minecraft:single_block_feature`; several emit one
+each plus a `minecraft:weighted_random_feature` over them.
+
+### `tree`
+
+| Field | Type | Notes |
+|---|---|---|
+| `shape` | `classic` \| `fancy` \| `acacia` \| `pine` \| `spruce` \| `mega_jungle` \| `mega_pine` \| `roofed` \| `fallen` | picks the trunk/canopy key pair |
+| `heightMin`, `heightMax` | number | trunk height is rolled between them |
+| `trunkWidth` | number 1–4 | mega shapes are forced to at least 2 |
+| `canopyWidth`, `canopyHeight` | number | radius and depth of the leaves |
+| `logLength`, `stumpHeight` | number | `fallen` only |
+| `trunkBlock`, `leafBlock` | block identifier | |
+| `leafVariation` | number 0–100 | `classic` only — chance an edge leaf is skipped |
+| `fruitBlock`, `fruitChance`, `fruitSteps` | block identifier, number, number | `classic` only — becomes `canopy_decoration` |
+| `trunkDecorationBlock`, `trunkDecorationChance` | block identifier, number | `classic`, `mega_*` and `fallen` — becomes `trunk_decoration` |
+| `mayGrowOn`, `mayReplace`, `mayGrowThrough` | string[] | |
+| `baseBlock` | string[] | placed under the trunk |
+| `baseCluster`, `baseClusterRadius` | boolean, number | a patch of the ground block around the base |
+| `canBeSubmerged` | boolean | |
+
+Each shape maps onto a different pair of keys — `classic` writes `trunk` +
+`canopy`, `acacia` writes `acacia_trunk` + `acacia_canopy`, `fallen` writes
+`fallen_trunk` and no canopy at all. Only keys the generator is confident about
+are emitted; anything more exotic is a Code View override on a valid file.
+
+### `structure`
+
+| Field | Type | Notes |
+|---|---|---|
+| `source` | `painted` \| `mcstructure` | |
+| `grid` | `{ size: [x, y, z], cells: string[] }` | painted mode; cells are flat, `y` slowest and `x` fastest, `""` for empty |
+| `anchor` | `center` \| `corner` | which part of the layout lands on the chosen position |
+| `mayReplace` | string[] | painted mode |
+| `structureName` | string | `.mcstructure` mode, e.g. `mystructure:hut` |
+| `facing` | `random` \| `north` \| `south` \| `east` \| `west` | |
+| `adjustmentRadius` | number 0–16 | how far the game may shuffle it looking for a fit |
+| `grounded`, `unburied` | boolean | |
+| `intersectAllowlist` | string[] | blocks the structure may overlap |
+
+A painted structure emits one `minecraft:single_block_feature` per distinct
+block, one offset `minecraft:scatter_feature` per filled cell, and a
+`minecraft:aggregate_feature` over the lot — Bedrock has no "place this at an
+offset" primitive, which is why painted builds are capped at 128 blocks. Past
+that, export the build from a structure block and use `mcstructure` mode; the
+builder does not write binary NBT, so copy the `.mcstructure` into
+`behavior_pack/structures/` yourself.
 
 ---
 
@@ -263,6 +395,25 @@ over time needs a scripted custom component. The builder generates one shared
 only when something actually uses it. Entity AI is still fully data-driven, so
 mob behaviour — including the avoid-radius and block-eating above — needs no
 script at all.
+
+**A biome owns its plants, not the other way round.** Which crops grow wild
+somewhere is a property of the biome, set in the biome node's `plants` list. A
+crop node says nothing about where it scatters, so the same crop can appear in
+two biomes at different densities without either preset knowing about the other.
+The generated feature rule is filtered by the biome's tag, so nothing you assign
+to one biome can turn up in another.
+
+**`biome` and `scatter` are for different jobs.** A `biome` scatters the crops it
+owns, inside itself. A `scatter` node places anything anywhere — vanilla blocks
+included — and is filtered by whatever biome tags you give it, which may be a
+custom biome's tag (`<namespace>_<biome name>`) or none at all. Reach for `biome`
+when the question is "what grows here", and `scatter` when it is "where does this
+block turn up".
+
+**Scatter percentages and weights are different numbers.** `scatterPercent` is
+how often the feature appears at all; the `weight` on each entry in a scatter's
+`blocks` list is that block's share of the placements that do happen. Weights are
+relative — the game normalises them — so 3 and 1 means 75% and 25%.
 
 **Prefer fields over raw files.** A preset written in fields survives a target
 profile bump, shows up in the wizard, and can be edited by hand afterwards. Raw

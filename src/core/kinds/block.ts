@@ -192,7 +192,28 @@ export const blockKind: ContentKind = {
       group: 'Advanced',
       placeholder: 'cooking_pot',
       when: (data) => bool(data, 'isCraftingStation'),
-      help: 'Recipes listing this tag under "Crafted at" become craftable here.',
+      help: 'Recipes made at this station carry this tag. The Recipe builder gives the block its own tab as soon as it is set.',
+    },
+    {
+      key: 'craftingGridRows',
+      label: 'Recipe rows',
+      type: 'slider',
+      group: 'Advanced',
+      min: 1,
+      max: 3,
+      step: 1,
+      when: (data) => bool(data, 'isCraftingStation'),
+      help: 'How many rows the station\u2019s tab offers. The in-game screen is always 3x3 — this only constrains the shape a recipe may take, which is what makes a two-slot pot feel like a two-slot pot.',
+    },
+    {
+      key: 'craftingGridCols',
+      label: 'Recipe columns',
+      type: 'slider',
+      group: 'Advanced',
+      min: 1,
+      max: 3,
+      step: 1,
+      when: (data) => bool(data, 'isCraftingStation'),
     },
   ],
 
@@ -222,6 +243,8 @@ export const blockKind: ContentKind = {
     lootSelf: true,
     isCraftingStation: false,
     craftingTag: '',
+    craftingGridRows: 3,
+    craftingGridCols: 3,
   }),
 
   emit(node, ctx) {
