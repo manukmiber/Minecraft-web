@@ -19,6 +19,7 @@ export interface FormatVersions {
   spawnRules: string
   recipe: string
   lootTable: string
+  /** World generation: `biomes/`, `features/` and `feature_rules/`. */
   biome: string
   feature: string
   featureRules: string

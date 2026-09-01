@@ -104,6 +104,12 @@ behavior_pack/
   features/<biome>_choice.json          ← only when a biome scatters 2+ plants
   features/<biome>_scatter.json
   feature_rules/<biome>_scatter_rule.json
+  features/<name>_feature.json          ← scatter, tree, structure
+  features/<name>_block[_n].json
+  features/<name>_mix.json              ← weighted block list
+  features/<name>_patch.json            ← clumped scatter
+  features/<name>_cell_<n>.json         ← one per block of a painted structure
+  feature_rules/<name>_rule.json
   scripts/main.js                       ← only when a crop grows
 resource_pack/
   manifest.json
@@ -155,6 +161,7 @@ Checked against the 1.26.x creator changelogs. Stable at the time of writing was
 | Fog | `1.16.100` | referenced by a client biome's `minecraft:fog_appearance` |
 | Recipe | `1.20.10` | recipe schema is conservative; supports `unlock`. `minecraft:recipe_shaped`, `_shapeless` and `_furnace` are all emitted from this one version |
 | Loot table | `1.20.10` | |
+| Feature, feature rule | `1.13.0` | the world-generation schemas have not moved since |
 | Client entity, render controller, animation, animation controller | `1.10.0` | |
 | Geometry | `1.16.0` | |
 
@@ -169,6 +176,21 @@ alongside for packs that must run on older clients.
   `"<namespace>:crop_growth": { state, max, chance }`. One registration serves
   every crop in the project, and the script module only appears in the manifest
   when a crop actually uses it.
+- **World generation is data-driven and needs no script.** A feature says what
+  to build, a feature rule says where and how often. The rule's `distribution`
+  carries the scatter itself — `scatter_chance` as a percentage, `iterations`
+  per chunk and the `y` band — so the common "spread this around" case needs no
+  intermediate `minecraft:scatter_feature`. Omitting `y` entirely is what makes
+  the game follow terrain height; an explicit full-world range is not the same
+  thing and buries most attempts in stone.
+- **Biomes are matched on tags, not names.** There is no biome-name test, and
+  entries in `minecraft:biome_filter` are AND-ed, so "any of these biomes" has to
+  be a single `any_of` wrapping the tag tests.
+- **Bedrock has no "place this feature at an offset" primitive.** A painted
+  structure is therefore an aggregate of one-iteration scatter features with
+  constant coordinates — one file per block, which is why the painter is capped
+  at 128 blocks. Larger builds go through a `.mcstructure` and
+  `minecraft:structure_template_feature`; the builder does not write binary NBT.
 - **Entity AI is unaffected** — `minecraft:behavior.*` goals are still
   data-driven, so avoidance, block-eating and spawn rules need no script.
 - **World generation is unaffected too** — biomes, features and feature rules

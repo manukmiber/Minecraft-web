@@ -13,8 +13,10 @@ import { twMerge } from 'tailwind-merge'
 import {
   Bird,
   Box,
+  Castle,
   Hammer,
   Package,
+  Shuffle,
   Sprout,
   Trees,
   type LucideIcon,
@@ -25,7 +27,16 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
 }
 
 /** Icons referenced by name from the kind registry. */
-const KIND_ICONS: Record<string, LucideIcon> = { Box, Package, Sprout, Bird, Hammer, Trees }
+const KIND_ICONS: Record<string, LucideIcon> = {
+  Box,
+  Package,
+  Sprout,
+  Bird,
+  Hammer,
+  Trees,
+  Shuffle,
+  Castle,
+}
 
 export function kindIcon(name: string): LucideIcon {
   return KIND_ICONS[name] ?? Box

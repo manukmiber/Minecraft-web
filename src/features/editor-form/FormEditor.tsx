@@ -19,6 +19,8 @@ import { projectBiomeTags } from '../../core/kinds/biome'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
 import { BiomeScatterField } from './BiomeScatterField'
+import { LayerGridField } from './LayerGridField'
+import { WeightedListField } from './WeightedListField'
 import { RecipeStationField } from '../recipes/RecipeStationField'
 
 /** Vanilla biome tags worth offering next to the project's own. */
@@ -463,6 +465,19 @@ function Field({
             onPatch={(patch) => updateNode(node.id, { data: { ...node.data, ...patch } })}
           />
         )
+
+      case 'weighted-list':
+        return (
+          <WeightedListField
+            value={value}
+            onChange={onChange}
+            placeholder={field.placeholder}
+            listId={`${id}-list`}
+          />
+        )
+
+      case 'layer-grid':
+        return <LayerGridField value={value} onChange={onChange} fieldId={id} />
 
       case 'biome-scatter':
         return <BiomeScatterField value={value} onChange={onChange} />

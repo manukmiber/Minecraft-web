@@ -11,6 +11,8 @@ describe('schemaLabelFor', () => {
     expect(schemaLabelFor('behavior_pack/entities/crow.json')).toBe('Entity')
     expect(schemaLabelFor('behavior_pack/spawn_rules/crow.json')).toBe('Spawn rules')
     expect(schemaLabelFor('behavior_pack/recipes/fried_egg.json')).toBe('Recipe')
+    expect(schemaLabelFor('behavior_pack/features/mango_feature.json')).toBe('Feature')
+    expect(schemaLabelFor('behavior_pack/feature_rules/mango_rule.json')).toBe('Feature rule')
     expect(schemaLabelFor('resource_pack/entity/crow.entity.json')).toBe('Client entity')
     expect(schemaLabelFor('resource_pack/models/entity/crow.geo.json')).toBe('Geometry')
     expect(schemaLabelFor('resource_pack/textures/terrain_texture.json')).toBe('Terrain atlas')

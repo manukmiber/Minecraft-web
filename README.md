@@ -31,13 +31,19 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
 - **Code view when you want it.** A full Monaco editor with JSON schema
   validation. Generated files are read-only until you explicitly take one over,
   which records a tracked, revertible override.
-- **3D preview.** Blocks, items, crop growth stages and entities, built from the
-  same geometry the pack ships. A biome gets a flat preview instead: its colours
-  as the game mixes them, the plants that will grow wild in it and how many
-  crows that feeds.
+- **3D preview.** Blocks, items, crop growth stages, entities and painted
+  structures, built from the same geometry the pack ships. A biome gets a flat
+  preview instead: its colours as the game mixes them, the plants that will grow
+  wild in it and how many crows that feeds.
 - **Biomes own their plants.** Assign crops to a biome, weight them against each
   other, and the scatter features and feature rules are written scoped to that
   biome — nothing leaks into the biome next door.
+- **World generation for everything else.** Scatter blocks through new chunks
+  with a percentage and a height band, grow trees by picking a shape rather than
+  a schema, and paint small structures layer by layer. Where a biome scatters the
+  plants it owns, these place anything anywhere — filtered by biome tag, pass and
+  height. Feature and rule are generated together either way, so a distribution
+  can never point at a feature that does not exist.
 - **Save and Export are separate.** Save commits a version to your project repo;
   Export builds a `.mcaddon` in the browser. Both require a changelog entry.
 - **Preset inbox.** Anything another tool writes into `preset/` in the project
