@@ -15,7 +15,12 @@
 import type { ContentKind } from '../registry/types'
 import type { VirtualFile } from '../vfs/types'
 import { BP, RP } from '../generators/emit'
-import { BODY_PRESET_OPTIONS, buildGeometryJson, getBodyPreset } from '../generators/geometry'
+import {
+  BODY_PRESET_OPTIONS,
+  buildGeometryJson,
+  geometryUvRegions,
+  getBodyPreset,
+} from '../generators/geometry'
 import { buildAnimations, wrapAnimations, wrapControllers } from '../generators/entityAnim'
 import { bool, compact, list, num, str } from './shared'
 
@@ -278,10 +283,11 @@ export const entityKind: ContentKind = {
     {
       key: 'spawnBiomeTag',
       label: 'Biome tag',
-      type: 'text',
+      type: 'biome-ref',
       group: 'Spawning',
       placeholder: 'overworld',
       when: (data) => bool(data, 'spawnEnabled'),
+      help: 'Custom biomes in this add-on are offered by name; anything else is a vanilla tag.',
     },
     {
       key: 'spawnBrightnessMin',
@@ -323,14 +329,18 @@ export const entityKind: ContentKind = {
     },
   ],
 
-  textureSlots: () => [
+  textureSlots: (node) => [
     {
       key: 'main',
       label: 'Skin',
       target: 'entity',
       required: true,
-      recommended: 64,
+      recommended: getBodyPreset(str(node.data, 'bodyPreset', 'biped')).textureWidth,
       help: 'Must match the UV layout of the chosen body preset.',
+      // Lets the pixel editor lay the body preset's UV map over the canvas
+      // instead of offering a blank square.
+      uvTemplate: (current) =>
+        geometryUvRegions(getBodyPreset(str(current.data, 'bodyPreset', 'biped'))),
     },
   ],
 

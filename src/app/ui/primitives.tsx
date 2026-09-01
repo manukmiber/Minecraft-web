@@ -33,8 +33,8 @@ const KIND_ICONS: Record<string, LucideIcon> = {
   Sprout,
   Bird,
   Hammer,
-  Shuffle,
   Trees,
+  Shuffle,
   Castle,
 }
 

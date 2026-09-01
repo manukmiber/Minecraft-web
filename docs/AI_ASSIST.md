@@ -52,7 +52,7 @@ app owns it, and a hand-edit is lost the next time it saves.
 
 ```jsonc
 {
-  "kind": "entity",              // one of: block, crop, item, entity, recipe
+  "kind": "entity",              // block, crop, item, entity, recipe or biome
   "name": "crow",                // identifier name part — ^[a-z][a-z0-9_]*$
   "displayName": "Crow",         // human name; goes into the .lang file
   "notes": "Optional note shown in the inspector",
@@ -148,6 +148,7 @@ Texture slots: `stage0` … `stageN-1`, plus `seed`.
 | `isFuel`, `fuelDuration` | boolean, number | |
 | `handEquipped`, `glint` | boolean | |
 | `placesBlock` | `#block:...` \| `#crop:...` | how seeds work |
+| `placeOn` | string[] | blocks the item may be used on. Empty means anywhere; a seed wants `minecraft:farmland` |
 | `tags` | string[] | |
 
 Texture slot: `main`.
@@ -181,23 +182,69 @@ Texture slot: `main`.
 
 Texture slot: `main` (must match the UV layout of the chosen body preset).
 
-### `recipe`
+### `biome`
 
 | Field | Type | Notes |
 |---|---|---|
-| `recipeType` | `shaped` \| `shapeless` \| `furnace` | |
-| `grid` | string[9] | row-major, `""` for an empty slot |
+| `placement` | `standalone` \| `nested` | `nested` scatters into an existing biome instead of generating a new one |
+| `hostBiome` | biome tag | nested only, e.g. `plains`, `swamp` |
+| `rarity` | number 1–20 | standalone only; weight against vanilla biomes in the same climate |
+| `temperature` | number 0–2 | below 0.15 accumulates snow; above 1.0 no rain falls |
+| `downfall` | number 0–1 | |
+| `grassColor`, `foliageColor`, `waterColor`, `fogColor` | `#rrggbb` | written to the resource-pack client biome and fog definition |
+| `topBlock`, `midBlock` | block identifier | surface materials |
+| `heightNoise` | `default` \| `lowlands` \| `swamp` \| `river` \| `beach` \| `mountains` | terrain shape |
+| `plants` | object[] | see below |
+| `scatterAttempts` | number 1–48 | planting attempts per chunk |
+| `scatterChance` | number 5–100 | percent chance each attempt succeeds |
+| `farmlandBiome` | boolean | adds the shared `<namespace>_farmland` tag |
+| `crowEntity`, `scarecrowEntity` | `#entity:...` | references only — their own fields still define them |
+| `crowDensity` | number | 0 uses the estimate from the planting density |
+| `tags` | string[] | added to the generated tags; keep `overworld` for a surface biome |
+
+Each entry in `plants`:
+
+```jsonc
+{
+  "plant": "#crop:rice_plant",   // node reference, resolved on apply
+  "weight": 8,                   // 1–20, relative to the other plants here
+  "placeOn": [],                 // empty inherits the crop's own plantOn
+  "needsWater": true,            // requires an adjacent water block
+  "maturity": "ripe"             // "ripe" | "half" | "sprout"
+}
+```
+
+---
+
+### `recipe`
+
+A recipe is authored against a **station**, which decides its slot layout and
+the `tags` it is written with.
+
+| Field | Type | Notes |
+|---|---|---|
+| `station` | station id | `crafting_table`, `furnace`, `blast_furnace`, `smoker`, `campfire`, `soul_campfire`, `stonecutter`, or `node:<block node id>` for one of your own cookware blocks |
+| `recipeType` | `shaped` \| `shapeless` | grid stations only; the stonecutter is always shapeless |
+| `grid` | string[9] | row-major, `""` for an empty slot. Always nine entries: a station smaller than 3x3 reads the top-left corner of the same space, so widening it later finds the ingredients where you left them |
 | `trimPattern` | boolean | on, the arrangement can sit anywhere in the grid |
-| `input` | item identifier | furnace only |
+| `input` | item identifier | cooking stations only |
+| `fuel` | item identifier | cooking stations only, and **not** written into the recipe — Bedrock decides what burns from the fuel item's own `minecraft:fuel` component. The builder keeps it so it can warn when the item cannot burn |
 | `result` | item identifier or `#item:...` | |
 | `resultCount` | number | |
-| `stations` | string[] | vanilla tags: `crafting_table`, `furnace`, `smoker`, … |
 | `unlockItems` | string[] | reveals the recipe in the recipe book |
 | `priority` | number | lower wins when several recipes match |
 
-To make something "cooked", put a cookware **block** in one of the grid slots.
-There is no custom crafting UI; the recipe is an ordinary shaped recipe that
-happens to require the pan.
+`stations: string[]` from older presets is still understood: the first tag that
+matches a known station is used.
+
+There are two ways to make something "cooked":
+
+- put a cookware **block** in one of the grid slots — an ordinary crafting-table
+  recipe that happens to require the pan, and needs nothing else; or
+- give the block `isCraftingStation` and a `craftingTag`, which gives it its own
+  crafting screen in-game and its own tab in the builder. `craftingGridRows` and
+  `craftingGridCols` (1–3, default 3) narrow the shape a recipe may take; the
+  in-game screen is always 3x3.
 
 
 ### World placement — shared by `scatter`, `tree` and `structure`
@@ -348,6 +395,20 @@ over time needs a scripted custom component. The builder generates one shared
 only when something actually uses it. Entity AI is still fully data-driven, so
 mob behaviour — including the avoid-radius and block-eating above — needs no
 script at all.
+
+**A biome owns its plants, not the other way round.** Which crops grow wild
+somewhere is a property of the biome, set in the biome node's `plants` list. A
+crop node says nothing about where it scatters, so the same crop can appear in
+two biomes at different densities without either preset knowing about the other.
+The generated feature rule is filtered by the biome's tag, so nothing you assign
+to one biome can turn up in another.
+
+**`biome` and `scatter` are for different jobs.** A `biome` scatters the crops it
+owns, inside itself. A `scatter` node places anything anywhere — vanilla blocks
+included — and is filtered by whatever biome tags you give it, which may be a
+custom biome's tag (`<namespace>_<biome name>`) or none at all. Reach for `biome`
+when the question is "what grows here", and `scatter` when it is "where does this
+block turn up".
 
 **Scatter percentages and weights are different numbers.** `scatterPercent` is
 how often the feature appears at all; the `weight` on each entry in a scatter's

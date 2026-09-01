@@ -240,7 +240,7 @@ export function placementFields(options: PlacementOptions = {}): FieldSpec[] {
       group,
       placeholder: 'bamboo, monster, animal, …',
       when: (data) => on(data) && str(data, 'biomeMatch', 'any') !== 'any',
-      help: 'Any tag the game knows. Tags are what biomes are actually matched on — there is no biome-name test.',
+      help: 'Any tag the game knows, including a custom biome from this add-on — its tag is <namespace>_<biome name>. Tags are what biomes are actually matched on; there is no biome-name test.',
     },
   ]
 }
@@ -380,7 +380,7 @@ export function emitFeatureRule(
     body: {
       type: 'json',
       value: {
-        format_version: ctx.target.formats.featureRule,
+        format_version: ctx.target.formats.featureRules,
         'minecraft:feature_rules': {
           description: {
             identifier: ctx.ownIdentifier(fileName),

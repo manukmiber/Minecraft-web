@@ -8,6 +8,7 @@ import {
   FolderTree,
   Inbox,
   LayoutGrid,
+  Palette,
   Settings,
   History,
   type LucideIcon,
@@ -27,6 +28,7 @@ interface RailItem {
 const ITEMS: RailItem[] = [
   { view: 'content', icon: Blocks, label: 'Content', hint: 'Everything in this add-on' },
   { view: 'files', icon: FolderTree, label: 'Files', hint: 'The generated pack tree' },
+  { view: 'textures', icon: Palette, label: 'Textures', hint: 'Draw and edit pixel art' },
   { view: 'presets', icon: LayoutGrid, label: 'Presets', hint: 'Ready-made content to drop in' },
   { view: 'inbox', icon: Inbox, label: 'Preset inbox', hint: 'Presets waiting in the project repo' },
   { view: 'versions', icon: History, label: 'Versions', hint: 'Save slots and history' },

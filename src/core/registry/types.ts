@@ -8,6 +8,7 @@
  * adding one entry here, not touching the UI.
  */
 
+import type { UvRegion } from '../generators/geometry'
 import type { ContentNode, ProjectModel } from '../model/types'
 import type { TargetProfile } from '../targets/profiles'
 import type { VirtualFile } from '../vfs/types'
@@ -29,8 +30,12 @@ export type FieldType =
   | 'block-ref'
   /** Ordered list of growth stages, each with its own texture slot. */
   | 'stage-list'
-  /** The interactive 3x3 crafting grid. */
-  | 'recipe-grid'
+  /** The visual crafting-station builder: tabs, slots, item browser, preview. */
+  | 'recipe-station'
+  /** The plant checklist of a biome, with per-plant density and placement. */
+  | 'biome-scatter'
+  /** A biome tag, autocompleted from this project's biomes plus the vanilla set. */
+  | 'biome-ref'
   /** Free list of strings (families, tags, ...). */
   | 'string-list'
   /** Identifiers with a relative weight each — "plant A 3 times out of 4". */
@@ -74,6 +79,12 @@ export interface TextureSlot {
   required?: boolean
   /** Recommended square size, surfaced as a warning not an error. */
   recommended?: number
+  /**
+   * Named regions of the texture sheet, for slots whose PNG is a UV map rather
+   * than a plain square — an entity skin, say. The pixel editor draws them as a
+   * template so you can see which patch is the head and which is a wing.
+   */
+  uvTemplate?: (node: ContentNode) => UvRegion[] | null
 }
 
 export type PreviewSpec =
@@ -87,6 +98,8 @@ export type PreviewSpec =
   | { type: 'entity'; textureSlot: string; geometryKey?: string }
   /** Voxel box from a `layer-grid` field, drawn with the project's own textures. */
   | { type: 'structure'; gridKey: string }
+  /** Flat ambience panel: biome colours, the plants in it and the crow estimate. */
+  | { type: 'biome' }
   /** Nothing meaningful to show in 3D (recipes, loot tables). */
   | { type: 'none' }
 

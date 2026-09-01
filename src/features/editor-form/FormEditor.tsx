@@ -15,11 +15,32 @@ import type { ContentNode } from '../../core/model/types'
 import { getKind } from '../../core/registry/types'
 import type { FieldSpec } from '../../core/registry/types'
 import { isValidName } from '../../core/util/id'
+import { projectBiomeTags } from '../../core/kinds/biome'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
+import { BiomeScatterField } from './BiomeScatterField'
 import { LayerGridField } from './LayerGridField'
-import { RecipeGridField } from './RecipeGridField'
 import { WeightedListField } from './WeightedListField'
+import { RecipeStationField } from '../recipes/RecipeStationField'
+
+/** Vanilla biome tags worth offering next to the project's own. */
+const VANILLA_BIOME_TAGS = [
+  'overworld',
+  'plains',
+  'forest',
+  'jungle',
+  'swamp',
+  'savanna',
+  'taiga',
+  'desert',
+  'beach',
+  'river',
+  'ocean',
+  'mountains',
+  'mesa',
+  'nether',
+  'the_end',
+]
 
 export function FormEditor({ node }: { node: ContentNode }) {
   const { project, updateNode, updateNodeData } = useProject()
@@ -169,7 +190,7 @@ function Field({
   node: ContentNode
   onChange(value: unknown): void
 }) {
-  const { project } = useProject()
+  const { project, updateNode } = useProject()
   const value = node.data[field.key]
   const error = field.validate ? field.validate(value, node.data) : null
   const id = `${node.id}-${field.key}`
@@ -435,11 +456,13 @@ function Field({
         )
       }
 
-      case 'recipe-grid':
+      case 'recipe-station':
+        // The only field that owns more than its own key: the builder writes
+        // the station, the grid, the cooking slots and the result together.
         return (
-          <RecipeGridField
-            value={Array.isArray(value) ? (value as string[]) : []}
-            onChange={onChange}
+          <RecipeStationField
+            node={node}
+            onPatch={(patch) => updateNode(node.id, { data: { ...node.data, ...patch } })}
           />
         )
 
@@ -455,6 +478,36 @@ function Field({
 
       case 'layer-grid':
         return <LayerGridField value={value} onChange={onChange} fieldId={id} />
+
+      case 'biome-scatter':
+        return <BiomeScatterField value={value} onChange={onChange} />
+
+      case 'biome-ref': {
+        const listId = `${id}-biomes`
+        const own = projectBiomeTags(project)
+        return (
+          <>
+            <input
+              id={id}
+              list={listId}
+              value={typeof value === 'string' ? value : ''}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder={field.placeholder ?? 'overworld'}
+              className={cn(inputClass, 'font-mono')}
+            />
+            <datalist id={listId}>
+              {own.map((option) => (
+                <option key={option.value} value={option.value} label={option.label} />
+              ))}
+              {VANILLA_BIOME_TAGS.filter(
+                (tag) => !own.some((option) => option.value === tag),
+              ).map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
+          </>
+        )
+      }
 
       default:
         return (

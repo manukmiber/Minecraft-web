@@ -55,6 +55,11 @@ export const SCHEMA_BINDINGS: SchemaBinding[] = [
     fileMatch: ['**/behavior_pack/recipes/*.json'],
   },
   {
+    label: 'Biome',
+    uri: `${CDN}/behavior/biomes/biomes.json`,
+    fileMatch: ['**/behavior_pack/biomes/*.json'],
+  },
+  {
     label: 'Feature',
     uri: `${CDN}/behavior/features/features.json`,
     fileMatch: ['**/behavior_pack/features/*.json'],
@@ -93,6 +98,11 @@ export const SCHEMA_BINDINGS: SchemaBinding[] = [
     label: 'Animation controller',
     uri: `${CDN}/resource/animation_controllers/animation_controller.json`,
     fileMatch: ['**/resource_pack/animation_controllers/*.json'],
+  },
+  {
+    label: 'Fog',
+    uri: `${CDN}/resource/fog/fog.json`,
+    fileMatch: ['**/resource_pack/fogs/*.json'],
   },
   {
     label: 'Terrain atlas',

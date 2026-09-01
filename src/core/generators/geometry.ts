@@ -284,3 +284,66 @@ export function buildGeometryJson(
     ],
   }
 }
+
+/**
+ * One labelled rectangle on an entity's texture sheet.
+ *
+ * A Bedrock cube unwraps into the cross layout `applyBoxUv` samples from, so
+ * the patch a single cube occupies is `2*(depth+width)` wide and
+ * `depth+height` tall, anchored at its UV origin. Handing those rectangles to
+ * the pixel editor is what turns a blank 64x64 square into a template with a
+ * head, a body and two wings on it.
+ */
+export interface UvRegion {
+  label: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export function geometryUvRegions(spec: GeometrySpec): UvRegion[] {
+  // Mirrored limbs deliberately share one patch of the sheet, so they are
+  // collapsed into a single region — two labels stacked on the same rectangle
+  // would be unreadable and would suggest there are two areas to paint.
+  const byRect = new Map<string, { region: UvRegion; labels: string[] }>()
+
+  for (const bone of spec.bones) {
+    bone.cubes.forEach((cube, index) => {
+      const [w, h, d] = cube.size
+      const region: UvRegion = {
+        label: bone.cubes.length > 1 ? `${bone.name} ${index + 1}` : bone.name,
+        x: cube.uv[0],
+        y: cube.uv[1],
+        width: 2 * (d + w),
+        height: d + h,
+      }
+      const key = `${region.x},${region.y},${region.width},${region.height}`
+      const existing = byRect.get(key)
+      if (existing) existing.labels.push(region.label)
+      else byRect.set(key, { region, labels: [region.label] })
+    })
+  }
+
+  return [...byRect.values()].map(({ region, labels }) =>
+    labels.length > 1 ? { ...region, label: `${sharedName(labels)} (mirrored)` } : region,
+  )
+}
+
+/** `leg_right` + `leg_left` -> `leg`. Falls back to the first name. */
+function sharedName(labels: string[]): string {
+  const parts = labels.map((label) => label.split('_'))
+  const shared: string[] = []
+  for (let i = 0; i < parts[0].length; i++) {
+    const segment = parts[0][i]
+    if (!parts.every((part) => part[i] === segment)) break
+    shared.push(segment)
+  }
+  return shared.length > 0 ? shared.join('_') : labels[0]
+}
+
+/** The sheet size a body preset's UVs are laid out against. */
+export function presetSheetSize(preset: string): { width: number; height: number } {
+  const spec = getBodyPreset(preset)
+  return { width: spec.textureWidth, height: spec.textureHeight }
+}
