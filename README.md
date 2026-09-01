@@ -110,6 +110,38 @@ PNGs are written by a small encoder in `src/features/texture-maker/png.ts`
 rather than through a canvas `toBlob`, because a canvas round trip premultiplies
 alpha and quietly shifts the colour of semi-transparent pixels.
 
+## Vanilla artwork
+
+Every `minecraft:` identifier the app offers is drawn with its real texture,
+from [Faithful 32x](https://faithfulpack.net/) — in the item browser, in recipe
+slots, on the structure painter's grid and brushes, and on the cubes in the 3D
+structure preview. Blocks with distinct faces get them, and textures with holes
+in them (glass, leaves, a torch) are cut out rather than drawn black. Chests and
+shields are the exception: the game builds those from an entity atlas, so there
+is no square face to use and they keep the monogram tile.
+
+Biome-tinted masks — grass, leaves, vines, lily pads — ship colourless in a
+resource pack and are tinted per biome at render time. The item browser has no
+biome to tint against, so the plains colours the editor already uses as defaults
+are baked in during extraction.
+
+Only the identifiers the catalogue names are extracted; the pack holds about
+five thousand files and the app draws under two hundred. To refresh them, or
+after adding identifiers to `src/core/data/vanillaItems.ts`:
+
+```bash
+node scripts/extract-faithful.mjs "Faithful 32x - 26.2.zip"
+```
+
+That writes `public/textures/vanilla/**` and regenerates
+`src/core/data/vanillaTextures.ts`, both of which are committed so a checkout
+builds without the pack.
+
+Textures by the Faithful Resource Pack team, used under the Faithful License —
+the full terms are in `public/textures/vanilla/LICENSE.txt`. They are a preview
+inside the builder only: the generators emit your own textures and nothing else,
+so no vanilla artwork is written into an exported `.mcaddon`.
+
 ## Two repositories
 
 | | |

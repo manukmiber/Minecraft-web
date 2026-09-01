@@ -9,6 +9,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Vanilla artwork, from Faithful 32x.** Every `minecraft:` identifier the app
+  offers is drawn with its real texture instead of a monogram or a hashed
+  colour — in the item browser, in recipe slots, on the structure painter's
+  grid and brushes, and on the cubes in the 3D structure preview.
+  - Faces are per-side where the block has them, so a log reads as a log and a
+    crafting table shows its front; textures with holes in them (glass, leaves,
+    a torch) are cut out rather than drawn black.
+  - Biome-tinted masks — grass, leaves, vines, lily pads — have the plains
+    colours baked in, since the item browser has no biome to tint against.
+  - `node scripts/extract-faithful.mjs <pack.zip>` pulls only the identifiers
+    the catalogue names out of the pack and regenerates
+    `src/core/data/vanillaTextures.ts`. Re-run it when the catalogue grows.
+  - Chests and shields keep the monogram tile: the game draws them from an
+    entity atlas, so the pack has no square face to use.
+  - Textures by the [Faithful Resource Pack](https://faithfulpack.net/) team,
+    used under the Faithful License (`public/textures/vanilla/LICENSE.txt`).
+    They are a preview only — nothing vanilla is written into an exported pack.
+
 - **Biome builder.** A new `biome` content kind, so a themed patch of world is
   built from a form like everything else — left column the settings, right
   column a live preview of the ambience, the plants and the crow population.

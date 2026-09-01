@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Cloud, Github, KeyRound, Package, XCircle } from 'lucide-react'
+import { CheckCircle2, Cloud, Github, KeyRound, Package, Palette, XCircle } from 'lucide-react'
 
 import { Badge, Button, FieldRow, Section, Spinner, cn, inputClass } from '../../app/ui/primitives'
 import { TARGET_PROFILES } from '../../core/targets/profiles'
@@ -293,6 +293,22 @@ export function SettingsView() {
             <KeyRound size={13} className="text-ink-400" />
             Single-user by design — there is no account system and no server-side copy of your
             credentials.
+          </p>
+          <p className="flex items-start gap-2">
+            <Palette size={13} className="mt-0.5 shrink-0 text-ink-400" />
+            <span>
+              Vanilla block and item artwork is{' '}
+              <a
+                href="https://faithfulpack.net/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent-400 underline underline-offset-2"
+              >
+                Faithful 32x
+              </a>
+              , used under the Faithful License. It is shown here as a preview only and is never
+              written into an exported pack.
+            </span>
           </p>
           <div className="flex gap-2 pt-1">
             <Badge tone="neutral">model v{project.modelVersion}</Badge>
