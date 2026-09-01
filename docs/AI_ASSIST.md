@@ -199,6 +199,91 @@ To make something "cooked", put a cookware **block** in one of the grid slots.
 There is no custom crafting UI; the recipe is an ordinary shaped recipe that
 happens to require the pan.
 
+
+### World placement — shared by `scatter`, `tree` and `structure`
+
+All three world-generation kinds carry the same placement block, which becomes
+the feature rule. Omit `worldPlace` (or set it to `false`) and no rule is
+written at all — the feature is still generated, just never placed on its own.
+
+| Field | Type | Notes |
+|---|---|---|
+| `worldPlace` | boolean | off writes the feature but no rule |
+| `scatterPercent` | number 0–100 | chance a single attempt places anything |
+| `iterations` | number 1–256 | attempts per chunk; density ≈ attempts × chance |
+| `placementPass` | `surface_pass` \| `underground_pass` \| `final_pass` \| … | see `PLACEMENT_PASS_OPTIONS` |
+| `yMode` | `surface` \| `uniform` \| `triangle` \| `fixed` | `surface` omits `y` so the game follows terrain height |
+| `yAnchor` | `absolute` \| `above_bottom` \| `below_top` | how `yMin`/`yMax` are measured |
+| `yMin`, `yMax` | number | the height band; `yMin` alone when `yMode` is `fixed` |
+| `biomeMatch` | `any` \| `anyOf` \| `allOf` \| `noneOf` | `any` writes no biome filter |
+| `biomeTags` | string[] | vanilla tags — `plains`, `jungle`, `nether`, … |
+| `biomeTagsCustom` | string[] | any other tag; merged with `biomeTags` |
+
+Biomes are matched on **tags**, not names — there is no biome-name test. Several
+tags under `anyOf` are wrapped in a single `any_of`, because a flat list would
+mean a biome carrying every tag at once.
+
+### `scatter`
+
+| Field | Type | Notes |
+|---|---|---|
+| `placeMode` | `blocks` \| `feature` | |
+| `blocks` | `{ id, weight }[]` | weights are relative, not percentages: 3 and 1 is 75% / 25% |
+| `featureRef` | feature identifier | used when `placeMode` is `feature` |
+| `patchSize` | number 1–64 | above 1 the placements clump into a patch |
+| `patchRadius` | number 1–8 | |
+| `mayPlaceOn` | string[] | becomes `may_attach_to.top`; empty allows any surface |
+| `mayReplace` | string[] | defaults to `["minecraft:air"]` |
+| `enforceSurvivability`, `enforcePlacement`, `randomizeRotation` | boolean | |
+
+One entry in `blocks` emits a `minecraft:single_block_feature`; several emit one
+each plus a `minecraft:weighted_random_feature` over them.
+
+### `tree`
+
+| Field | Type | Notes |
+|---|---|---|
+| `shape` | `classic` \| `fancy` \| `acacia` \| `pine` \| `spruce` \| `mega_jungle` \| `mega_pine` \| `roofed` \| `fallen` | picks the trunk/canopy key pair |
+| `heightMin`, `heightMax` | number | trunk height is rolled between them |
+| `trunkWidth` | number 1–4 | mega shapes are forced to at least 2 |
+| `canopyWidth`, `canopyHeight` | number | radius and depth of the leaves |
+| `logLength`, `stumpHeight` | number | `fallen` only |
+| `trunkBlock`, `leafBlock` | block identifier | |
+| `leafVariation` | number 0–100 | `classic` only — chance an edge leaf is skipped |
+| `fruitBlock`, `fruitChance`, `fruitSteps` | block identifier, number, number | `classic` only — becomes `canopy_decoration` |
+| `trunkDecorationBlock`, `trunkDecorationChance` | block identifier, number | `classic`, `mega_*` and `fallen` — becomes `trunk_decoration` |
+| `mayGrowOn`, `mayReplace`, `mayGrowThrough` | string[] | |
+| `baseBlock` | string[] | placed under the trunk |
+| `baseCluster`, `baseClusterRadius` | boolean, number | a patch of the ground block around the base |
+| `canBeSubmerged` | boolean | |
+
+Each shape maps onto a different pair of keys — `classic` writes `trunk` +
+`canopy`, `acacia` writes `acacia_trunk` + `acacia_canopy`, `fallen` writes
+`fallen_trunk` and no canopy at all. Only keys the generator is confident about
+are emitted; anything more exotic is a Code View override on a valid file.
+
+### `structure`
+
+| Field | Type | Notes |
+|---|---|---|
+| `source` | `painted` \| `mcstructure` | |
+| `grid` | `{ size: [x, y, z], cells: string[] }` | painted mode; cells are flat, `y` slowest and `x` fastest, `""` for empty |
+| `anchor` | `center` \| `corner` | which part of the layout lands on the chosen position |
+| `mayReplace` | string[] | painted mode |
+| `structureName` | string | `.mcstructure` mode, e.g. `mystructure:hut` |
+| `facing` | `random` \| `north` \| `south` \| `east` \| `west` | |
+| `adjustmentRadius` | number 0–16 | how far the game may shuffle it looking for a fit |
+| `grounded`, `unburied` | boolean | |
+| `intersectAllowlist` | string[] | blocks the structure may overlap |
+
+A painted structure emits one `minecraft:single_block_feature` per distinct
+block, one offset `minecraft:scatter_feature` per filled cell, and a
+`minecraft:aggregate_feature` over the lot — Bedrock has no "place this at an
+offset" primitive, which is why painted builds are capped at 128 blocks. Past
+that, export the build from a structure block and use `mcstructure` mode; the
+builder does not write binary NBT, so copy the `.mcstructure` into
+`behavior_pack/structures/` yourself.
+
 ---
 
 ## Worked example
@@ -263,6 +348,11 @@ over time needs a scripted custom component. The builder generates one shared
 only when something actually uses it. Entity AI is still fully data-driven, so
 mob behaviour — including the avoid-radius and block-eating above — needs no
 script at all.
+
+**Scatter percentages and weights are different numbers.** `scatterPercent` is
+how often the feature appears at all; the `weight` on each entry in a scatter's
+`blocks` list is that block's share of the placements that do happen. Weights are
+relative — the game normalises them — so 3 and 1 means 75% and 25%.
 
 **Prefer fields over raw files.** A preset written in fields survives a target
 profile bump, shows up in the wizard, and can be edited by hand afterwards. Raw

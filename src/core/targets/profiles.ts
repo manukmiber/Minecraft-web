@@ -19,6 +19,9 @@ export interface FormatVersions {
   spawnRules: string
   recipe: string
   lootTable: string
+  /** World generation: `features/` and `feature_rules/`. */
+  feature: string
+  featureRule: string
   /** Resource pack */
   clientEntity: string
   renderController: string
@@ -84,6 +87,8 @@ export const TARGET_PROFILES: TargetProfile[] = [
       spawnRules: '1.8.0',
       recipe: '1.20.10',
       lootTable: '1.20.10',
+      feature: '1.13.0',
+      featureRule: '1.13.0',
       clientEntity: '1.10.0',
       renderController: '1.10.0',
       animation: '1.10.0',
@@ -125,6 +130,8 @@ export const TARGET_PROFILES: TargetProfile[] = [
       spawnRules: '1.8.0',
       recipe: '1.20.10',
       lootTable: '1.20.10',
+      feature: '1.13.0',
+      featureRule: '1.13.0',
       clientEntity: '1.10.0',
       renderController: '1.10.0',
       animation: '1.10.0',

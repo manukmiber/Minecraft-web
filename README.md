@@ -23,8 +23,13 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
 - **Code view when you want it.** A full Monaco editor with JSON schema
   validation. Generated files are read-only until you explicitly take one over,
   which records a tracked, revertible override.
-- **3D preview.** Blocks, items, crop growth stages and entities, built from the
-  same geometry the pack ships.
+- **World generation without hand-written rules.** Scatter blocks through new
+  chunks with a percentage and a height band, grow trees by picking a shape
+  rather than a schema, and paint small structures layer by layer. The feature
+  and its rule are generated together, so a distribution can never point at a
+  feature that does not exist.
+- **3D preview.** Blocks, items, crop growth stages, entities and painted
+  structures, built from the same geometry the pack ships.
 - **Save and Export are separate.** Save commits a version to your project repo;
   Export builds a `.mcaddon` in the browser. Both require a changelog entry.
 - **Preset inbox.** Anything another tool writes into `preset/` in the project

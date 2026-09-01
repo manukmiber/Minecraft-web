@@ -12,6 +12,9 @@ import { cropKind } from './crop'
 import { entityKind } from './entity'
 import { itemKind } from './item'
 import { recipeKind } from './recipe'
+import { scatterKind } from './scatter'
+import { structureKind } from './structure'
+import { treeKind } from './tree'
 
 let installed = false
 
@@ -23,6 +26,9 @@ export function installBuiltinKinds(): void {
   registerKind(itemKind)
   registerKind(entityKind)
   registerKind(recipeKind)
+  registerKind(scatterKind)
+  registerKind(treeKind)
+  registerKind(structureKind)
 }
 
-export { blockKind, cropKind, itemKind, entityKind, recipeKind }
+export { blockKind, cropKind, itemKind, entityKind, recipeKind, scatterKind, treeKind, structureKind }

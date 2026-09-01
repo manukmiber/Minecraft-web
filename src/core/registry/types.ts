@@ -33,6 +33,10 @@ export type FieldType =
   | 'recipe-grid'
   /** Free list of strings (families, tags, ...). */
   | 'string-list'
+  /** Identifiers with a relative weight each — "plant A 3 times out of 4". */
+  | 'weighted-list'
+  /** A small box of blocks, painted one Y layer at a time. */
+  | 'layer-grid'
 
 export interface FieldOption {
   value: string
@@ -81,6 +85,8 @@ export type PreviewSpec =
   | { type: 'crop'; stagesKey: string; slotPrefix: string }
   /** Bedrock geometry rendered from a `.geo.json`, textured by an entity slot. */
   | { type: 'entity'; textureSlot: string; geometryKey?: string }
+  /** Voxel box from a `layer-grid` field, drawn with the project's own textures. */
+  | { type: 'structure'; gridKey: string }
   /** Nothing meaningful to show in 3D (recipes, loot tables). */
   | { type: 'none' }
 

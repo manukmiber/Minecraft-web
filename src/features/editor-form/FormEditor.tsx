@@ -17,7 +17,9 @@ import type { FieldSpec } from '../../core/registry/types'
 import { isValidName } from '../../core/util/id'
 import { useProject } from '../../state/project'
 import { TextureSlotDrop } from '../textures/TextureSlotDrop'
+import { LayerGridField } from './LayerGridField'
 import { RecipeGridField } from './RecipeGridField'
+import { WeightedListField } from './WeightedListField'
 
 export function FormEditor({ node }: { node: ContentNode }) {
   const { project, updateNode, updateNodeData } = useProject()
@@ -440,6 +442,19 @@ function Field({
             onChange={onChange}
           />
         )
+
+      case 'weighted-list':
+        return (
+          <WeightedListField
+            value={value}
+            onChange={onChange}
+            placeholder={field.placeholder}
+            listId={`${id}-list`}
+          />
+        )
+
+      case 'layer-grid':
+        return <LayerGridField value={value} onChange={onChange} fieldId={id} />
 
       default:
         return (
