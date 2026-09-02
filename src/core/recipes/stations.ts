@@ -16,7 +16,8 @@
  */
 
 import type { ProjectModel } from '../model/types'
-import { bool, num, str } from '../kinds/shared'
+import { bool, list, num, str } from '../kinds/shared'
+import { BEDROCK_CRAFTING_TABLE_LIMITS } from './stationLimits'
 
 /** How a station arranges its ingredient slots. */
 export type StationLayout =
@@ -42,6 +43,11 @@ export interface CraftingStation {
   forceShapeless?: boolean
   /** Set for stations that come from a block in this project. */
   blockNodeId?: string
+  /**
+   * Text drawn at the top of the station's screen. Bedrock writes this into
+   * `table_name`; the Java export uses it as the menu title.
+   */
+  screenTitle?: string
 }
 
 /** The prefix that marks a station backed by one of the project's own blocks. */
@@ -133,18 +139,27 @@ export function stationFromBlock(project: ProjectModel, nodeId: string): Craftin
   const tag = str(node.data, 'craftingTag').trim()
   if (!tag) return null
 
+  // Extra tags let one block double as, say, both a cooking pot and a normal
+  // crafting table. Bedrock caps the list, so it is trimmed here rather than
+  // being rejected by the game after export.
+  const extra = list(node.data, 'craftingExtraTags')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry && entry !== tag)
+  const tags = [tag, ...extra].slice(0, BEDROCK_CRAFTING_TABLE_LIMITS.maxTags)
+
   return {
     id: `${NODE_STATION_PREFIX}${node.id}`,
     label: node.displayName,
     icon: 'Box',
     hint: `Custom station from this add-on — recipes tagged "${tag}".`,
-    tags: [tag],
+    tags,
     layout: {
       kind: 'grid',
       rows: Math.min(3, Math.max(1, Math.round(num(node.data, 'craftingGridRows', 3)))),
       cols: Math.min(3, Math.max(1, Math.round(num(node.data, 'craftingGridCols', 3)))),
     },
     blockNodeId: node.id,
+    screenTitle: str(node.data, 'craftingScreenTitle').trim() || node.displayName,
   }
 }
 
