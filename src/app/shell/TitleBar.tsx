@@ -12,8 +12,9 @@ import { Badge, Button, Spinner, cn } from '../ui/primitives'
 import { useProject } from '../../state/project'
 import { useUi } from '../../state/ui'
 import { useSettings, repoConfigured } from '../../state/settings'
-import { ChangelogDialog, type ChangelogIntent } from '../../features/save-export/ChangelogDialog'
-import { exportAddon, saveToSlot } from '../../features/save-export/actions'
+import { ChangelogDialog } from '../../features/save-export/ChangelogDialog'
+import { ExportDialog } from '../../features/save-export/ExportDialog'
+import { exportBuild, saveToSlot } from '../../features/save-export/actions'
 
 /**
  * Mac uses Command, everything else uses Control. Showing "Ctrl" beside a ⌘
@@ -27,9 +28,8 @@ export function TitleBar() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
   const settings = useSettings()
 
-  const [dialog, setDialog] = useState<ChangelogIntent | null>(null)
+  const [dialog, setDialog] = useState<'save' | 'export' | null>(null)
   const [slot, setSlot] = useState(activeSlot)
-  const [commitExport, setCommitExport] = useState(true)
 
   const configured = repoConfigured(settings)
 
@@ -158,26 +158,38 @@ export function TitleBar() {
           variant="primary"
           icon={<Download size={15} />}
           onClick={() => setDialog('export')}
-          title="Build a .mcaddon in the browser"
+          title="Build for Bedrock and Java, and publish a release"
         >
           Export
         </Button>
       </header>
 
       <ChangelogDialog
-        open={dialog !== null}
-        intent={dialog ?? 'save'}
+        open={dialog === 'save'}
         slot={slot}
         onSlotChange={setSlot}
-        commitExport={commitExport && configured}
-        onCommitExportChange={setCommitExport}
         onCancel={() => setDialog(null)}
         onConfirm={async (changelog) => {
-          if (dialog === 'save') {
-            await saveToSlot(slot.trim() || 'main', changelog)
-          } else {
-            await exportAddon(changelog, commitExport && configured)
-          }
+          await saveToSlot(slot.trim() || 'main', changelog)
+          setDialog(null)
+        }}
+      />
+
+      <ExportDialog
+        open={dialog === 'export'}
+        repoConfigured={configured}
+        onCancel={() => setDialog(null)}
+        onConfirm={async (request) => {
+          await exportBuild({
+            changelog: request.changelog,
+            selection: {
+              bedrock: request.bedrock,
+              javaLoaders: request.javaLoaders,
+              javaProfileId: request.javaProfileId,
+            },
+            publish: request.publish,
+            channel: request.channel,
+          })
           setDialog(null)
         }}
       />

@@ -1,5 +1,10 @@
 /**
- * The changelog modal shared by Save and Export.
+ * The Save modal.
+ *
+ * It used to serve Export as well, back when exporting was one file and one
+ * checkbox. Export now has two platforms, five delivery routes and three
+ * release channels to choose between, so it moved to `ExportDialog` and this
+ * went back to doing one thing.
  *
  * Free-form on purpose — a textarea, not a form of Added/Fixed/Changed boxes.
  * The one rule is that it cannot be empty.
@@ -7,12 +12,10 @@
 
 import { useEffect, useId, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, GitCommit, Package, X } from 'lucide-react'
+import { AlertTriangle, GitCommit, X } from 'lucide-react'
 
 import { Button, Spinner, cn } from '../../app/ui/primitives'
 import { useModalA11y } from '../../app/ui/useModalA11y'
-
-export type ChangelogIntent = 'save' | 'export'
 
 /** Mac shows ⌘, everything else shows Ctrl. */
 const IS_APPLE =
@@ -20,11 +23,7 @@ const IS_APPLE =
 
 export interface ChangelogDialogProps {
   open: boolean
-  intent: ChangelogIntent
   slot: string
-  /** Extra option shown for exports. */
-  commitExport: boolean
-  onCommitExportChange(value: boolean): void
   onSlotChange(value: string): void
   onCancel(): void
   onConfirm(changelog: string): Promise<void>
@@ -32,10 +31,7 @@ export interface ChangelogDialogProps {
 
 export function ChangelogDialog({
   open,
-  intent,
   slot,
-  commitExport,
-  onCommitExportChange,
   onSlotChange,
   onCancel,
   onConfirm,
@@ -63,7 +59,7 @@ export function ChangelogDialog({
       setError(null)
       setBusy(false)
     }
-  }, [open, intent])
+  }, [open])
 
   const submit = async () => {
     if (!text.trim()) {
@@ -107,19 +103,13 @@ export function ChangelogDialog({
             className="w-full max-w-lg overflow-hidden rounded-xl border border-ink-600 bg-ink-850 shadow-float"
           >
             <header className="flex items-center gap-2.5 border-b border-ink-700 px-4 py-3">
-              {intent === 'save' ? (
-                <GitCommit size={18} aria-hidden="true" className="text-accent-500" />
-              ) : (
-                <Package size={18} aria-hidden="true" className="text-amber-500" />
-              )}
+              <GitCommit size={18} aria-hidden="true" className="text-accent-500" />
               <div className="flex-1">
                 <h2 id={titleId} className="text-base font-semibold text-ink-50">
-                  {intent === 'save' ? 'Save this version' : 'Export .mcaddon'}
+                  Save this version
                 </h2>
                 <p id={descriptionId} className="text-xs text-ink-300">
-                  {intent === 'save'
-                    ? 'Commits the model, its textures and this note to the project repo.'
-                    : 'Builds the archive in your browser and records it in the changelog.'}
+                  Commits the model, its textures and this note to the project repo.
                 </p>
               </div>
               <button
@@ -138,8 +128,7 @@ export function ChangelogDialog({
             </header>
 
             <div className="flex flex-col gap-3 px-4 py-4">
-              {intent === 'save' ? (
-                <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5">
                   <label htmlFor={slotId} className="text-xs font-medium text-ink-100">
                     Save slot
                   </label>
@@ -154,8 +143,7 @@ export function ChangelogDialog({
                   <span id={`${slotId}-help`} className="text-xs leading-relaxed text-ink-300">
                     Saving to a new name creates a separate version you can switch between.
                   </span>
-                </div>
-              ) : null}
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor={noteId} className="text-xs font-medium text-ink-100">
@@ -173,11 +161,7 @@ export function ChangelogDialog({
                     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') void submit()
                   }}
                   rows={5}
-                  placeholder={
-                    intent === 'save'
-                      ? 'Added rice growth stages and wired the crow to avoid scarecrows…'
-                      : 'First playable build with the cooking recipes…'
-                  }
+                  placeholder="Added rice growth stages and wired the crow to avoid scarecrows…"
                   className={cn(
                     'w-full resize-y rounded-md border bg-ink-900 px-2.5 py-2 text-sm leading-relaxed',
                     'text-ink-50 placeholder:text-ink-300 focus:outline-none',
@@ -187,18 +171,6 @@ export function ChangelogDialog({
                   )}
                 />
               </div>
-
-              {intent === 'export' ? (
-                <label className="tap-target flex min-h-9 cursor-pointer items-center gap-2.5 text-sm text-ink-200">
-                  <input
-                    type="checkbox"
-                    checked={commitExport}
-                    onChange={(event) => onCommitExportChange(event.target.checked)}
-                    className="size-4 shrink-0 accent-[var(--color-accent-500)]"
-                  />
-                  Also commit the .mcaddon to the project repo
-                </label>
-              ) : null}
 
               {error ? (
                 <div
@@ -232,13 +204,7 @@ export function ChangelogDialog({
                   aria-busy={busy}
                   icon={busy ? <Spinner /> : undefined}
                 >
-                  {busy
-                    ? intent === 'save'
-                      ? 'Saving…'
-                      : 'Building…'
-                    : intent === 'save'
-                      ? 'Save version'
-                      : 'Build & export'}
+                  {busy ? 'Saving…' : 'Save version'}
                 </Button>
               </div>
             </footer>

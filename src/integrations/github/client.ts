@@ -34,7 +34,32 @@ export interface CommitResult {
   url: string
 }
 
+/** A release as this app cares about it. */
+export interface ReleaseSummary {
+  id: number
+  tagName: string
+  name: string
+  prerelease: boolean
+  draft: boolean
+  htmlUrl: string
+  createdAt: string
+  assets: Array<{ name: string; size: number; downloadUrl: string }>
+}
+
+export interface CreateReleaseInput {
+  tagName: string
+  name: string
+  body: string
+  prerelease: boolean
+  /** Marks this the repository's "latest release". Stable builds only. */
+  makeLatest: boolean
+  /** Branch or commit the tag is cut from. */
+  targetCommitish: string
+}
+
 const API = 'https://api.github.com'
+/** Release assets do not go through api.github.com; uploads have their own host. */
+const UPLOADS = 'https://uploads.github.com'
 
 function toBase64(bytes: ArrayBuffer): string {
   const view = new Uint8Array(bytes)
@@ -209,5 +234,124 @@ export class GitHubClient {
     })
 
     return { sha: commit.sha, url: commit.html_url }
+  }
+
+  // -- releases --------------------------------------------------------------
+
+  /**
+   * Every release tag in the repo.
+   *
+   * Read before every publish so the next alpha build number comes from what is
+   * actually there rather than from a counter in one browser's local storage —
+   * two people exporting at once would otherwise both claim `alpha.3`.
+   */
+  async listReleaseTags(): Promise<string[]> {
+    const tags: string[] = []
+    // 100 is the API maximum; a project with more releases than that has older
+    // ones that cannot affect the next build number anyway.
+    const releases = await this.request<Array<{ tag_name: string }>>('/releases?per_page=100')
+    for (const release of releases) tags.push(release.tag_name)
+    return tags
+  }
+
+  async listReleases(limit = 30): Promise<ReleaseSummary[]> {
+    const releases = await this.request<
+      Array<{
+        id: number
+        tag_name: string
+        name: string | null
+        prerelease: boolean
+        draft: boolean
+        html_url: string
+        created_at: string
+        assets?: Array<{ name: string; size: number; browser_download_url: string }>
+      }>
+    >(`/releases?per_page=${Math.min(100, Math.max(1, limit))}`)
+
+    return releases.map((release) => ({
+      id: release.id,
+      tagName: release.tag_name,
+      name: release.name ?? release.tag_name,
+      prerelease: release.prerelease,
+      draft: release.draft,
+      htmlUrl: release.html_url,
+      createdAt: release.created_at,
+      assets: (release.assets ?? []).map((asset) => ({
+        name: asset.name,
+        size: asset.size,
+        downloadUrl: asset.browser_download_url,
+      })),
+    }))
+  }
+
+  async createRelease(input: CreateReleaseInput): Promise<{ id: number; htmlUrl: string; uploadUrl: string }> {
+    const release = await this.request<{ id: number; html_url: string; upload_url: string }>(
+      '/releases',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          tag_name: input.tagName,
+          target_commitish: input.targetCommitish,
+          name: input.name,
+          body: input.body,
+          draft: false,
+          prerelease: input.prerelease,
+          // GitHub only accepts the string form here, not a boolean.
+          make_latest: input.makeLatest ? 'true' : 'false',
+        }),
+      },
+    )
+    return { id: release.id, htmlUrl: release.html_url, uploadUrl: release.upload_url }
+  }
+
+  /**
+   * Attaches one file to a release.
+   *
+   * Assets go to uploads.github.com with the raw bytes as the body, not to the
+   * JSON API — so this bypasses `request`, which would set a JSON content type
+   * and corrupt the archive.
+   */
+  async uploadReleaseAsset(
+    releaseId: number,
+    fileName: string,
+    bytes: ArrayBuffer,
+    contentType = 'application/zip',
+  ): Promise<{ name: string; downloadUrl: string }> {
+    const url = `${UPLOADS}/repos/${this.config.owner}/${this.config.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(fileName)}`
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        accept: 'application/vnd.github+json',
+        authorization: `Bearer ${this.config.token}`,
+        'x-github-api-version': '2022-11-28',
+        'content-type': contentType,
+        'content-length': String(bytes.byteLength),
+      },
+      body: bytes,
+    })
+
+    if (!response.ok) {
+      let detail = response.statusText
+      try {
+        const body = (await response.json()) as { message?: string }
+        if (body.message) detail = body.message
+      } catch {
+        // Keep the status text.
+      }
+      throw new GitHubError(`Uploading ${fileName} failed: ${detail}`, response.status)
+    }
+
+    const asset = (await response.json()) as { name: string; browser_download_url: string }
+    return { name: asset.name, downloadUrl: asset.browser_download_url }
+  }
+
+  /**
+   * Removes a release. Used only to clean up after a failed asset upload — a
+   * release whose files are missing is worse than no release at all, because it
+   * takes the tag with it and blocks the retry.
+   */
+  async deleteRelease(releaseId: number): Promise<void> {
+    await this.request(`/releases/${releaseId}`, { method: 'DELETE' })
   }
 }

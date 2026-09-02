@@ -5,24 +5,45 @@
  *   saves/<slot>/assets/<id>.png  the textures that model references
  *   preset/*.preset.json          the inbox other tools (Claude Code) write to
  *   preset/applied/               presets already merged, kept for history
- *   exports/                      .mcaddon files that were exported
+ *   exports/<tag>/                every artifact from one export, by release tag
  *   CHANGELOG.md                  one entry per Save and per Export
  *
  * Nothing here is implicit: a preset stays in the inbox until it is applied,
  * and applying it moves the file rather than deleting it, so the history of
  * what came in from where is preserved in git.
+ *
+ * Exports are the one place the layout changed when releases arrived. They used
+ * to be loose files in `exports/`, which was fine for one `.mcaddon` per build
+ * and useless once a single export produced six files across two platforms. They
+ * are now grouped under the release tag that published them, so the folder and
+ * the GitHub release page tell the same story.
  */
 
 import { migrateProject } from '../../core/model/project'
 import type { AssetRef, ProjectModel, SaveSlot } from '../../core/model/types'
 import { GitHubClient } from './client'
-import type { PendingFile } from './client'
+import type { PendingFile, ReleaseSummary } from './client'
 
 export const SAVES_DIR = 'saves'
 export const PRESET_DIR = 'preset'
 export const PRESET_APPLIED_DIR = 'preset/applied'
 export const EXPORTS_DIR = 'exports'
 export const CHANGELOG_PATH = 'CHANGELOG.md'
+
+/** One built file on its way into a release. */
+export interface ReleaseArtifact {
+  fileName: string
+  bytes: ArrayBuffer
+  description: string
+}
+
+export interface PublishedRelease {
+  tag: string
+  htmlUrl: string
+  commitSha: string
+  commitUrl: string
+  uploaded: string[]
+}
 
 export interface PresetFile {
   name: string
@@ -123,21 +144,96 @@ export class ProjectRepo {
 
   // -- exports ---------------------------------------------------------------
 
-  async commitExport(
-    fileName: string,
-    archive: ArrayBuffer,
-    changelog: string,
-    project: ProjectModel,
-  ): Promise<{ sha: string; url: string; path: string }> {
-    const path = `${EXPORTS_DIR}/${fileName}`
-    const files: PendingFile[] = [
-      { path, content: archive },
-      await this.changelogEntry(`Export · ${fileName}`, changelog, [
-        `version ${project.version.join('.')}, namespace ${project.namespace}`,
+  /** Every release tag already in the repo, used to pick the next build number. */
+  async listReleaseTags(): Promise<string[]> {
+    return this.github.listReleaseTags()
+  }
+
+  async listReleases(limit = 30): Promise<ReleaseSummary[]> {
+    return this.github.listReleases(limit)
+  }
+
+  /**
+   * Commits an export and publishes it as a release, in that order.
+   *
+   * The order is not incidental. A GitHub release is a tag plus files, and the
+   * tag has to point at a commit — so the artifacts are committed first and the
+   * release is cut from the resulting commit, which means the release page and
+   * the repository agree about what shipped. Doing it the other way round tags
+   * whatever happened to be on the branch beforehand.
+   *
+   * If an asset upload fails the release is deleted again rather than left
+   * half-populated: a release missing its files still owns the tag, which would
+   * block the retry with a confusing "already exists".
+   */
+  async publishRelease(options: {
+    tag: string
+    name: string
+    body: string
+    prerelease: boolean
+    makeLatest: boolean
+    branch: string
+    artifacts: ReleaseArtifact[]
+    changelog: string
+    project: ProjectModel
+  }): Promise<PublishedRelease> {
+    if (options.artifacts.length === 0) {
+      throw new Error('There is nothing to release — no artifact was built.')
+    }
+
+    const files: PendingFile[] = options.artifacts.map((artifact) => ({
+      path: `${EXPORTS_DIR}/${options.tag}/${artifact.fileName}`,
+      content: artifact.bytes,
+    }))
+
+    files.push(
+      await this.changelogEntry(`Release · ${options.tag}`, options.changelog, [
+        `version ${options.project.version.join('.')}, namespace ${options.project.namespace}`,
+        `${options.artifacts.length} artifacts: ${options.artifacts.map((a) => a.fileName).join(', ')}`,
       ]),
-    ]
-    const result = await this.github.commit(`Export ${fileName}: ${firstLine(changelog)}`, files)
-    return { ...result, path }
+    )
+
+    const commit = await this.github.commit(
+      `Release ${options.tag}: ${firstLine(options.changelog)}`,
+      files,
+    )
+
+    const release = await this.github.createRelease({
+      tagName: options.tag,
+      name: options.name,
+      body: options.body,
+      prerelease: options.prerelease,
+      makeLatest: options.makeLatest,
+      // Tag the commit that was just made, not the branch head, so a push that
+      // lands between the two does not end up inside this release.
+      targetCommitish: commit.sha,
+    })
+
+    const uploaded: string[] = []
+    try {
+      for (const artifact of options.artifacts) {
+        const asset = await this.github.uploadReleaseAsset(
+          release.id,
+          artifact.fileName,
+          artifact.bytes,
+        )
+        uploaded.push(asset.name)
+      }
+    } catch (failure) {
+      await this.github.deleteRelease(release.id).catch(() => {
+        // The upload failure is the useful error; a failed cleanup on top of it
+        // would only bury it.
+      })
+      throw failure
+    }
+
+    return {
+      tag: options.tag,
+      htmlUrl: release.htmlUrl,
+      commitSha: commit.sha,
+      commitUrl: commit.url,
+      uploaded,
+    }
   }
 
   // -- preset inbox ----------------------------------------------------------

@@ -11,6 +11,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { DEFAULT_TARGET_ID } from '../core/targets/profiles'
+import { DEFAULT_JAVA_TARGET_ID } from '../core/targets/javaProfiles'
+import type { ModLoader } from '../core/targets/platforms'
+import type { ReleaseChannel } from '../core/export/release'
 import { DEFAULT_NAMESPACE } from '../core/model/project'
 
 export interface SettingsState {
@@ -28,7 +31,28 @@ export interface SettingsState {
 
   defaultNamespace: string
   defaultTargetProfileId: string
+  /** Minecraft version the Java exports target. */
+  javaTargetProfileId: string
   author: string
+
+  /**
+   * What the last export built, remembered so the dialog opens on the same
+   * targets rather than making you re-tick five boxes every time.
+   */
+  exportBedrock: boolean
+  exportJavaLoaders: ModLoader[]
+  /**
+   * Whether an export publishes a release. On by default: the point of the
+   * project repo is that every build is recoverable, and a build that only ever
+   * existed in a downloads folder is not.
+   */
+  publishRelease: boolean
+  /**
+   * Channel a new export starts on. Alpha, because promoting a build to
+   * release should be a deliberate act rather than the path of least
+   * resistance.
+   */
+  releaseChannel: ReleaseChannel
 
   /** Purely visual: lets someone on a weak device calm the interface down. */
   reducedMotion: boolean
@@ -40,13 +64,20 @@ export interface SettingsState {
 const DEFAULTS = {
   appRepo: 'manukmiber/Minecraft-web',
   githubToken: '',
-  githubOwner: '',
-  githubRepo: '',
+  // The project repo the app was built around. Still only a default — anyone
+  // can point this at their own repo, and the token decides what is reachable.
+  githubOwner: 'manukmiber',
+  githubRepo: 'plants-and-foods',
   githubBranch: 'main',
   workerPassphrase: '',
   defaultNamespace: DEFAULT_NAMESPACE,
   defaultTargetProfileId: DEFAULT_TARGET_ID,
+  javaTargetProfileId: DEFAULT_JAVA_TARGET_ID,
   author: '',
+  exportBedrock: true,
+  exportJavaLoaders: [] as ModLoader[],
+  publishRelease: true,
+  releaseChannel: 'alpha' as ReleaseChannel,
   reducedMotion: false,
 }
 
