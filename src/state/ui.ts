@@ -23,6 +23,8 @@ export type SideView =
   | 'presets'
   | 'inbox'
   | 'versions'
+  | 'compatibility'
+  | 'releases'
   | 'settings'
 
 interface UiState {

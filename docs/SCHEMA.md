@@ -1,8 +1,8 @@
 # Data shapes
 
-Reference for `project.json`, the preset file, and the Bedrock format versions
-the generators emit. If you are writing a preset by hand, `AI_ASSIST.md` is the
-friendlier document; this one is the specification.
+Reference for `project.json`, the preset file, and every format version the
+generators emit — Bedrock and Java. If you are writing a preset by hand,
+`AI_ASSIST.md` is the friendlier document; this one is the specification.
 
 ## `saves/<slot>/project.json`
 
@@ -87,7 +87,7 @@ Cross-references use `#kind:name` and are resolved at apply time — to a node i
 for `node-ref` fields, and to `<namespace>:<name>` for item, block, list and
 grid fields.
 
-## Generated pack layout
+## Generated pack layout — Bedrock
 
 ```
 behavior_pack/
@@ -143,6 +143,81 @@ Language keys written per node:
 
 Both item key shapes are written because Bedrock has used each of them for
 custom items; the unused one is simply ignored.
+
+## Generated layout — Java
+
+One project produces one of two shapes, depending on the delivery route. Both
+carry the same `data/` and `assets/` trees, because a mod's
+`src/main/resources` *is* a data pack — generating them twice would be
+generating them wrong.
+
+### Data pack route (no mod loader)
+
+Two archives, because Java splits them where Bedrock keeps them together:
+
+```
+datapack.zip
+  pack.mcmeta                                    ← pack_format decides which game reads it
+  data/<modid>/recipe/<name>.json                ← `recipes/` on 1.20.1
+  data/<modid>/loot_table/blocks/<name>.json     ← `loot_tables/` on 1.20.1
+  data/<modid>/worldgen/configured_feature/<name>.json
+  data/<modid>/worldgen/placed_feature/<name>.json
+  data/<modid>/worldgen/biome/<name>.json
+  data/<modid>/tags/item/<modid>_content.json    ← `tags/items/` on 1.20.1
+  data/minecraft/tags/block/mineable/pickaxe.json
+  data/minecraft/tags/block/crops.json
+
+resourcepack.zip
+  pack.mcmeta
+  assets/<modid>/lang/en_us.json
+  assets/<modid>/models/item/<name>.json
+  assets/<modid>/models/block/<name>.json
+  assets/<modid>/blockstates/<name>.json
+  assets/<modid>/textures/item/<name>.png
+  assets/<modid>/textures/block/<name>.png
+```
+
+There is no atlas file. A model that says `<modid>:item/rice` resolves to
+`assets/<modid>/textures/item/rice.png` by convention, which is why the Java
+side needs none of the atlas plumbing the Bedrock emitter has.
+
+### Mod route (Fabric, Quilt, Forge, NeoForge)
+
+```
+gradle.properties                                ← every version number, in one file
+settings.gradle                                  ← the loader's Maven, for the plugin
+build.gradle
+README.md                                        ← how to build it
+.gitignore
+src/main/resources/
+  pack.mcmeta                                    ← without this the game ignores data/ and assets/
+  fabric.mod.json | quilt.mod.json | META-INF/mods.toml | META-INF/neoforge.mods.toml
+  data/…  assets/…                               ← exactly the trees above
+  data/<modid>/forge|neoforge/biome_modifier/<name>.json   ← Forge family only
+src/main/java/com/<namespace>/
+  <Namespace>Mod.java                            ← entry point
+  <Namespace>ModClient.java                      ← screens; client only, always
+  ModRegistry.java                               ← the one class that knows the loader
+  ModItems.java  ModBlocks.java  ModCreativeTabs.java
+  <Name>CropBlock.java                           ← one per crop, extends CropBlock
+  StationBlock.java  StationMenu.java  StationScreen.java
+  StationRecipes.java  ModStations.java          ← custom crafting stations
+  ModStructures.java                             ← painted structures, baked in
+  ModWorldgen.java                               ← Fabric and Quilt only
+```
+
+Naming is mechanical here too, and needs four forms rather than Bedrock's one:
+
+| Form | Example | Used for |
+|---|---|---|
+| Registry id | `mmm:rice` | Everything the game reads |
+| Class name | `RiceCropBlock` | Generated source |
+| Field name | `RICE` | Registry constants |
+| Lang key | `block.mmm.rice` | Translations — dots, not a colon |
+
+All four derive from `namespace` + `name` in `generators/java/ids.ts`. The Java
+package is `com.<namespace>`, with a trailing underscore if the namespace is a
+Java keyword.
 
 ## Target profile — Bedrock 1.26.40
 
@@ -235,3 +310,91 @@ The code editor binds the community schemas from
 by file path, served from jsDelivr. Validation is assistance, not a gate: if the
 CDN is unreachable the editor falls back to plain syntax checking, and the
 generator remains the thing that guarantees a valid pack.
+
+
+## Target profiles — Java
+
+Three axes change between the supported Java versions, and each fails
+differently. All three live in `src/core/targets/javaProfiles.ts`.
+
+| | Java 1.21.1 | Java 1.20.1 |
+|---|---|---|
+| `dataPackFormat` | 48 | 15 |
+| `resourcePackFormat` | 34 | 15 |
+| `javaVersion` | 21 | 17 |
+| Registry folders | singular — `recipe/`, `loot_table/`, `tags/block/` | plural — `recipes/`, `loot_tables/`, `tags/blocks/` |
+| Recipe ingredient | `"minecraft:stick"` | `{"item": "minecraft:stick"}` |
+| Crafting result | `{"id": …, "count": n}` | `{"item": …, "count": n}` |
+| Smelting result | `{"id": …}` | `"minecraft:x"` |
+| Biome `carvers` | a list | `{"air": [], "liquid": []}` |
+| `ResourceLocation` | `ResourceLocation.fromNamespaceAndPath(…)` | `new ResourceLocation(…)` |
+| Food saturation | `.saturationModifier(f)` | `.saturationMod(f)` |
+| Block right-click | `useWithoutItem(…)` | `use(…)` |
+| `Screen#renderBackground` | takes mouse and partial tick | takes only the graphics |
+
+A pack using the wrong folder name is **silently ignored** — no error, nothing
+in the log — which is why the folder names are profile data rather than
+constants.
+
+### Loader coordinates
+
+| Loader | 1.21.1 | 1.20.1 | Metadata file |
+|---|---|---|---|
+| Fabric | loader 0.16.9, API 0.102.1 | loader 0.15.11, API 0.92.2 | `fabric.mod.json` |
+| Quilt | Fabric Loom build, ships both files | same | `quilt.mod.json` + `fabric.mod.json` |
+| Forge | 52.0.40 | 47.3.0 | `META-INF/mods.toml` |
+| NeoForge | 21.1.72 | 20.1.234 | `neoforge.mods.toml` / `mods.toml` |
+
+NeoForge 20.1 predates its own package rename, so on 1.20.1 it reads the Forge
+metadata file name *and* compiles against `net.minecraftforge.*`. That is why
+`loaderCode.ts` treats the dialect as a function of loader **and** version.
+
+## Crafting station fields
+
+A block becomes a crafting station through four fields, and the Bedrock limits
+on them are enforced while you type rather than by the game at load.
+
+| Field | Type | Bedrock limit |
+|---|---|---|
+| `isCraftingStation` | boolean | — |
+| `craftingTag` | string | 64 chars, `^[a-z][a-z0-9_]*$`. A vanilla tag warns. |
+| `craftingExtraTags` | string[] | 64 tags total across both fields |
+| `craftingScreenTitle` | string | 64 chars; `table_name` |
+| `craftingGridRows` / `craftingGridCols` | 1–3 | Constrains authoring only — the Bedrock screen is always 3×3 |
+
+Emitted as `minecraft:crafting_table` on Bedrock. On Java the grid size is
+honoured exactly by a generated menu and screen, and the station's recipes are
+baked into `StationRecipes.java` rather than written as data-pack files — see
+[`CRAFTING_STATIONS.md`](CRAFTING_STATIONS.md) for why.
+
+## Identifiers the platforms spell differently
+
+Some vanilla blocks have different names on each edition, and using the wrong
+one places nothing and reports nothing. The Java export rewrites the ones it
+knows and warns so the project can be fixed at source. The list is
+`BEDROCK_TO_JAVA_ITEMS` in `src/core/generators/java/ids.ts`; the ones that come
+up most:
+
+| Bedrock | Java |
+|---|---|
+| `minecraft:grass`, `minecraft:tallgrass` | `minecraft:short_grass` |
+| `minecraft:red_flower` | `minecraft:poppy` |
+| `minecraft:yellow_flower` | `minecraft:dandelion` |
+| `minecraft:log` / `leaves` / `planks` | `minecraft:oak_log` / `oak_leaves` / `oak_planks` |
+| `minecraft:waterlily` | `minecraft:lily_pad` |
+| `minecraft:snow_layer` | `minecraft:snow` |
+
+## Release tags
+
+Written by `src/core/export/release.ts` and parseable back, which is how the
+Releases panel recovers a build's channel without keeping a second record.
+
+```
+v<major>.<minor>.<patch>                 a stable release; marked latest
+v<major>.<minor>.<patch>-alpha.<build>   a pre-release
+v<major>.<minor>.<patch>-beta.<build>    a pre-release
+```
+
+Ordinary semver on purpose: anything that sorts tags puts the pre-releases
+before the stable version they lead up to. Build numbers are derived from the
+tags already in the repository, never stored anywhere.

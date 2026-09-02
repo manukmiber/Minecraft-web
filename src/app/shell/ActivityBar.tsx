@@ -9,8 +9,10 @@ import {
   Inbox,
   LayoutGrid,
   Palette,
+  Rocket,
   Settings,
   History,
+  SplitSquareHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -32,6 +34,13 @@ const ITEMS: RailItem[] = [
   { view: 'presets', icon: LayoutGrid, label: 'Presets', hint: 'Ready-made content to drop in' },
   { view: 'inbox', icon: Inbox, label: 'Preset inbox', hint: 'Presets waiting in the project repo' },
   { view: 'versions', icon: History, label: 'Versions', hint: 'Save slots and history' },
+  {
+    view: 'compatibility',
+    icon: SplitSquareHorizontal,
+    label: 'Compatibility',
+    hint: 'What survives on Bedrock, on a Java data pack and in a Java mod',
+  },
+  { view: 'releases', icon: Rocket, label: 'Releases', hint: 'Alpha, beta and release builds' },
 ]
 
 export function ActivityBar() {

@@ -12,6 +12,7 @@ import { motion } from 'framer-motion'
 import { ArrowDown, ArrowUp, Eraser, Layers, PaintBucket, Trash2 } from 'lucide-react'
 
 import { Button, cn, inputClass } from '../../app/ui/primitives'
+import { vanillaTexture, vanillaTextureUrl } from '../../core/data/vanillaTextures'
 import {
   MAX_GRID_BLOCKS,
   MAX_GRID_SIDE,
@@ -24,8 +25,7 @@ import {
 import { useProject } from '../../state/project'
 
 /**
- * Stable, readable swatch per identifier, so the same block reads the same in
- * the painter and in the 3D preview.
+ * Stable, readable swatch per identifier, for blocks with no artwork to show.
  *
  * Comma-separated on purpose: `THREE.Color` only parses the legacy `hsl()`
  * syntax, and the space-separated form silently comes out white.
@@ -34,6 +34,23 @@ export function blockColor(id: string): string {
   let hash = 0
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
   return `hsl(${hash % 360}, 52%, ${38 + (hash % 5) * 4}%)`
+}
+
+/**
+ * What a cell of this block looks like: its Faithful texture where the app has
+ * one, and the hashed swatch otherwise, so the painter and the 3D preview stay
+ * recognisably the same build.
+ *
+ * `dimmed` is the ghost of the layer below — a flat wash over the texture,
+ * since `color-mix` has nothing to mix with once the background is an image.
+ */
+export function blockBackground(id: string, dimmed = false): string {
+  const texture = vanillaTexture(id)
+  if (!texture) {
+    return dimmed ? `color-mix(in srgb, ${blockColor(id)} 22%, transparent)` : blockColor(id)
+  }
+  const image = `url("${vanillaTextureUrl(texture.icon)}") center/cover`
+  return dimmed ? `linear-gradient(#0f131ac2, #0f131ac2), ${image}` : image
 }
 
 const VANILLA = [
@@ -148,8 +165,8 @@ export function LayerGridField({
       <div className="flex flex-col gap-1.5 rounded-lg border border-ink-700 bg-ink-850 p-2.5">
         <div className="flex items-center gap-1.5">
           <span
-            className="size-6 shrink-0 rounded border border-ink-600"
-            style={{ background: erasing ? 'transparent' : blockColor(brush) }}
+            className="size-6 shrink-0 rounded border border-ink-600 [image-rendering:pixelated]"
+            style={{ background: erasing ? 'transparent' : blockBackground(brush) }}
           />
           <input
             id={fieldId}
@@ -201,8 +218,8 @@ export function LayerGridField({
               )}
             >
               <span
-                className="size-2.5 rounded-[2px]"
-                style={{ background: blockColor(id) }}
+                className="size-2.5 rounded-[2px] [image-rendering:pixelated]"
+                style={{ background: blockBackground(id) }}
                 aria-hidden
               />
               {id.replace(/^[a-z0-9_]+:/, '')}
@@ -278,17 +295,17 @@ export function LayerGridField({
                   if (painting.current) paint(x, z)
                 }}
                 className={cn(
-                  'size-7 rounded-[3px] border transition-colors',
+                  'size-7 rounded-[3px] border transition-colors [image-rendering:pixelated]',
                   block ? 'border-ink-500' : 'border-dashed border-ink-700 hover:border-ink-500',
                 )}
                 style={{
                   background: block
-                    ? blockColor(block)
+                    ? blockBackground(block)
                     : // The floor below shows through faintly, which is what makes
                       // stacking a wall across layers possible without guessing.
                       below
-                      ? `color-mix(in srgb, ${blockColor(below)} 22%, transparent)`
-                      : undefined,
+                        ? blockBackground(below, true)
+                        : undefined,
                 }}
               />
             )

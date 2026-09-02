@@ -30,6 +30,8 @@ const PANELS: Array<{ view: SideView; label: string }> = [
   { view: 'presets', label: 'Preset library' },
   { view: 'inbox', label: 'Preset inbox' },
   { view: 'versions', label: 'Versions' },
+  { view: 'compatibility', label: 'Compatibility' },
+  { view: 'releases', label: 'Releases' },
   { view: 'settings', label: 'Settings' },
 ]
 

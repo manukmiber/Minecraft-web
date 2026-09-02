@@ -18,6 +18,8 @@ import { TitleBar } from './TitleBar'
 import { Toasts } from './Toasts'
 import { ContentExplorer } from '../../features/explorer/ContentExplorer'
 import { FileExplorer } from '../../features/explorer/FileExplorer'
+import { CompatibilityView } from '../../features/compatibility/CompatibilityView'
+import { ReleasesView } from '../../features/releases/ReleasesView'
 import { PresetInbox } from '../../features/presets/PresetInbox'
 import { PresetLibrary } from '../../features/presets/PresetLibrary'
 import { SettingsView } from '../../features/settings/SettingsView'
@@ -40,6 +42,8 @@ const TITLES: Record<SideView, string> = {
   presets: 'Preset library',
   inbox: 'Preset inbox',
   versions: 'Versions',
+  compatibility: 'Compatibility',
+  releases: 'Releases',
   settings: 'Settings',
 }
 
@@ -57,6 +61,10 @@ function SidePanelBody({ view }: { view: SideView }) {
       return <PresetInbox />
     case 'versions':
       return <VersionsView />
+    case 'compatibility':
+      return <CompatibilityView />
+    case 'releases':
+      return <ReleasesView />
     case 'settings':
       return <SettingsView />
   }
