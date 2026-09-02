@@ -34,7 +34,7 @@ export function RecipePreview({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
         In-game preview
       </p>
 
@@ -69,7 +69,7 @@ export function RecipePreview({
           <PreviewSlot id={result} catalog={catalog} large />
           {resultCount > 1 ? (
             <span
-              className="absolute -bottom-0.5 -right-0.5 rounded-sm px-1 font-mono text-[10px] font-bold leading-tight"
+              className="absolute -bottom-0.5 -right-0.5 rounded-sm px-1 font-mono text-xs font-bold leading-tight"
               style={{ background: '#3f3f3f', color: '#ffffff' }}
             >
               {resultCount}

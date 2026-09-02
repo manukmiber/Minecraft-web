@@ -9,8 +9,10 @@ import {
   Inbox,
   LayoutGrid,
   Palette,
+  Rocket,
   Settings,
   History,
+  SplitSquareHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -32,6 +34,13 @@ const ITEMS: RailItem[] = [
   { view: 'presets', icon: LayoutGrid, label: 'Presets', hint: 'Ready-made content to drop in' },
   { view: 'inbox', icon: Inbox, label: 'Preset inbox', hint: 'Presets waiting in the project repo' },
   { view: 'versions', icon: History, label: 'Versions', hint: 'Save slots and history' },
+  {
+    view: 'compatibility',
+    icon: SplitSquareHorizontal,
+    label: 'Compatibility',
+    hint: 'What survives on Bedrock, on a Java data pack and in a Java mod',
+  },
+  { view: 'releases', icon: Rocket, label: 'Releases', hint: 'Alpha, beta and release builds' },
 ]
 
 export function ActivityBar() {
@@ -39,7 +48,10 @@ export function ActivityBar() {
   const nodeCount = useProject((s) => s.project.nodes.length)
 
   return (
-    <nav className="flex w-12 shrink-0 flex-col items-center border-r border-ink-800 bg-ink-950 py-2">
+    <nav
+      aria-label="Workspace panels"
+      className="flex w-12 shrink-0 flex-col items-center border-r border-ink-800 bg-ink-950 py-2"
+    >
       {ITEMS.map((item) => {
         const active = sideView === item.view && sidebarOpen
         const Icon = item.icon
@@ -50,10 +62,15 @@ export function ActivityBar() {
             onClick={() => setSideView(item.view)}
             title={`${item.label} — ${item.hint}`}
             aria-label={item.label}
-            aria-current={active}
+            // Announces which panel is showing; `undefined` rather than
+            // `false` so the attribute disappears when it does not apply.
+            aria-current={active ? 'page' : undefined}
+            aria-expanded={active}
             className={cn(
-              'group relative flex size-11 items-center justify-center rounded-lg transition-colors duration-150',
-              active ? 'text-ink-50' : 'text-ink-400 hover:text-ink-100',
+              'tap-target group relative flex size-11 items-center justify-center rounded-lg',
+              'transition-colors [transition-duration:var(--duration-state)]',
+              'hover:bg-ink-900 active:bg-ink-850',
+              active ? 'bg-ink-900 text-ink-50' : 'text-ink-300 hover:text-ink-100',
             )}
           >
             {active ? (
@@ -63,9 +80,13 @@ export function ActivityBar() {
                 className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-accent-500"
               />
             ) : null}
-            <Icon size={19} strokeWidth={1.6} />
+            <Icon size={19} strokeWidth={1.6} aria-hidden="true" />
             {item.view === 'content' && nodeCount > 0 ? (
-              <span className="absolute right-1.5 top-1.5 min-w-3 rounded-full bg-accent-500/85 px-1 text-[9px] font-semibold leading-3 text-ink-950">
+              <span
+                className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-accent-500 px-1 py-px text-center text-xs font-semibold leading-4 text-ink-950"
+                // The number alone is meaningless out of context.
+                aria-label={`${nodeCount} items`}
+              >
                 {nodeCount > 99 ? '99+' : nodeCount}
               </span>
             ) : null}
@@ -80,14 +101,24 @@ export function ActivityBar() {
         onClick={() => setSideView('settings')}
         title="Settings"
         aria-label="Settings"
+        aria-current={sideView === 'settings' && sidebarOpen ? 'page' : undefined}
+        aria-expanded={sideView === 'settings' && sidebarOpen}
         className={cn(
-          'flex size-11 items-center justify-center rounded-lg transition-colors duration-150',
+          'tap-target relative flex size-11 items-center justify-center rounded-lg',
+          'transition-colors [transition-duration:var(--duration-state)]',
+          'hover:bg-ink-900 active:bg-ink-850',
           sideView === 'settings' && sidebarOpen
-            ? 'text-ink-50'
-            : 'text-ink-400 hover:text-ink-100',
+            ? 'bg-ink-900 text-ink-50'
+            : 'text-ink-300 hover:text-ink-100',
         )}
       >
-        <Settings size={19} strokeWidth={1.6} />
+        {sideView === 'settings' && sidebarOpen ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-accent-500"
+          />
+        ) : null}
+        <Settings size={19} strokeWidth={1.6} aria-hidden="true" />
       </button>
     </nav>
   )

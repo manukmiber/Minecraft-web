@@ -60,7 +60,7 @@ export function ItemBrowser({
     <div className="flex min-h-0 flex-col rounded-lg border border-ink-700 bg-ink-850/60">
       <div className="flex shrink-0 flex-col gap-2 border-b border-ink-700 p-2">
         <div className="flex items-center gap-1.5">
-          <Search size={13} className="shrink-0 text-ink-400" />
+          <Search size={13} className="shrink-0 text-ink-300" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -78,7 +78,7 @@ export function ItemBrowser({
               'min-w-0 truncate rounded border px-2 py-0.5 text-[10.5px] transition-colors',
               onlyMine
                 ? 'border-accent-500/60 bg-accent-500/15 text-accent-400'
-                : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',
+                : 'border-edge bg-ink-800 text-ink-200 hover:border-ink-300',
             )}
             title="Show only the items and blocks this add-on defines"
           >
@@ -99,14 +99,14 @@ export function ItemBrowser({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {groups.length === 0 ? (
-          <p className="px-1 py-6 text-center text-[11px] text-ink-400">
+          <p className="px-1 py-6 text-center text-xs text-ink-300">
             Nothing matches that. You can still type an identifier straight into a slot.
           </p>
         ) : null}
 
         {groups.map(({ group, entries }) => (
           <section key={group} className="pb-3">
-            <h4 className="flex items-center gap-1.5 px-0.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+            <h4 className="flex items-center gap-1.5 px-0.5 pb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
               {group}
               {group === PROJECT_GROUP ? <Badge tone="good">yours</Badge> : null}
             </h4>
@@ -129,7 +129,7 @@ export function ItemBrowser({
                   className="flex cursor-grab flex-col items-center gap-1 rounded-md border border-transparent p-1 transition-colors hover:border-ink-600 hover:bg-ink-800 active:cursor-grabbing"
                 >
                   <ItemTile entry={entry} size={30} />
-                  <span className="line-clamp-2 text-center text-[9px] leading-tight text-ink-300">
+                  <span className="line-clamp-2 text-center text-xs leading-tight text-ink-300">
                     {entry.label}
                   </span>
                 </motion.button>

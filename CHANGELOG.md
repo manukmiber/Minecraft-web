@@ -63,6 +63,54 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Deleting a crop now also removes it from any biome that scattered it, the same
   way it already cleared single references.
 
+### Accessibility and interface pass
+
+A sweep of the whole workspace against a UI/UX review checklist. Nothing moved
+that did not have a reason to.
+
+- **Contrast.** Every text token now clears 4.5:1 on every surface in the scale;
+  the old `ink-300` sat at 4.2:1 and `ink-400` — used for placeholders, metadata
+  and the pack version — at 2.6:1. `ink-400` and `ink-500` are non-text tokens
+  now, and a new `--color-edge` gives interactive control boundaries the 3:1 they
+  need, separate from the hairline used for decorative panel edges.
+- **Type scale.** 12px is the floor: the 9/10/11px labels are gone and the base
+  size is 14px. Rows, toolbars and the status bar grew to match, and the empty
+  state's title is no longer the same size as its own body copy.
+- **Reduced motion.** `MotionConfig reducedMotion="user"` plus a CSS
+  `prefers-reduced-motion` block, so every animation in the app follows the OS
+  setting. Motion durations are tokens picked by distance travelled rather than
+  one value copied everywhere.
+- **Keyboard.** A skip link, a `<main>` landmark, and a focus indicator on
+  everything by default. Both splitters are `role="separator"` and resize with
+  the arrow keys, so dragging is no longer the only way. Both modals trap Tab,
+  close on Escape, and hand focus back to whatever opened them.
+- **Screen readers.** Toasts announce through a live region that is mounted up
+  front, with errors as assertive; the busy indicator announces; icons beside
+  text are hidden from the accessibility tree; icon-only controls carry names;
+  and form errors are wired to their field with `aria-describedby` and
+  `role="alert"`.
+- **Colour is never the only signal.** The unsaved dot says "Unsaved", the
+  status bar spells out "1 warning", the command palette's selected row gets an
+  accent bar as well as a tint, and toast severity is spoken.
+- **Hit areas.** Controls grow to at least 44px under a finger through a centred
+  overlay that leaves the visual bounds — and so the layout — untouched. Presses
+  change colour rather than scale, so nothing jitters.
+- **Small screens.** Below 768px the sidebar floats over the editor beside the
+  rail rather than crushing it, with a tap-anywhere scrim; below 1024px the
+  preview does the same. The status bar sheds its secondary readouts instead of
+  wrapping. Safe-area insets are respected and pinch zoom is not disabled.
+
+### Fixed
+
+- An editor tab's close button never appeared on hover: `group` was on the tab
+  button while the close button was its sibling, so `group-hover` could not
+  match. It now reveals on hover *and* on keyboard focus — previously it could
+  be focused while invisible.
+- Problems that lead nowhere rendered as disabled buttons, which look pressable
+  and do nothing; they are plain text now.
+- Both splitters listened for mouse events only, so neither worked under a
+  finger.
+
 ## Earlier
 
 This file starts here; everything before it — the project model and generation

@@ -91,7 +91,7 @@ export function PresetInbox() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-ink-800 px-2 py-1.5">
-        <span className="flex-1 text-[10px] uppercase tracking-[0.14em] text-ink-300">
+        <span className="flex-1 text-xs uppercase tracking-[0.14em] text-ink-300">
           preset/ · {settings.githubOwner}/{settings.githubRepo}
         </span>
         <Button
@@ -107,7 +107,7 @@ export function PresetInbox() {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {error ? (
-          <div className="flex gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 p-2.5 text-[11px] leading-relaxed text-rose-500">
+          <div className="flex gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 p-2.5 text-xs leading-relaxed text-rose-500">
             <AlertTriangle size={14} className="mt-px shrink-0" />
             {error}
           </div>
@@ -141,7 +141,7 @@ export function PresetInbox() {
                   <h4 className="truncate text-xs font-medium text-ink-50">
                     {entry.preset?.label ?? entry.file.name}
                   </h4>
-                  <p className="truncate font-mono text-[10px] text-ink-400">{entry.file.path}</p>
+                  <p className="truncate font-mono text-xs text-ink-300">{entry.file.path}</p>
                 </div>
                 {entry.preset ? (
                   <Badge tone="accent">{entry.preset.nodes.length} nodes</Badge>
@@ -151,7 +151,7 @@ export function PresetInbox() {
               </header>
 
               {entry.preset?.description ? (
-                <p className="mt-1.5 text-[11px] leading-relaxed text-ink-300">
+                <p className="mt-1.5 text-xs leading-relaxed text-ink-300">
                   {entry.preset.description}
                 </p>
               ) : null}
@@ -214,7 +214,7 @@ export function PresetInbox() {
                   >
                     Apply to active save
                   </Button>
-                  <span className="text-[10px] text-ink-400">
+                  <span className="text-xs text-ink-300">
                     Moves the file to preset/applied/
                   </span>
                 </footer>
@@ -223,7 +223,7 @@ export function PresetInbox() {
               {entry.preset?.notes && entry.preset.notes.length > 0 ? (
                 <ul className="mt-2 flex flex-col gap-1 border-l border-ink-700 pl-2">
                   {entry.preset.notes.map((note) => (
-                    <li key={note} className="flex gap-1.5 text-[10.5px] leading-relaxed text-ink-400">
+                    <li key={note} className="flex gap-1.5 text-[10.5px] leading-relaxed text-ink-300">
                       <Check size={10} className="mt-0.5 shrink-0" />
                       {note}
                     </li>

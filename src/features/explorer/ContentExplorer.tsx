@@ -46,7 +46,7 @@ export function ContentExplorer() {
               title={kind.description}
               icon={<Icon size={12} className={ACCENT_CLASS[kind.accent]} />}
             >
-              <Plus size={10} className="text-ink-400" />
+              <Plus size={10} className="text-ink-300" />
               {kind.label}
             </Button>
           )
@@ -76,13 +76,13 @@ export function ContentExplorer() {
               <button
                 type="button"
                 onClick={() => setCollapsed((prev) => ({ ...prev, [group]: !prev[group] }))}
-                className="flex h-7 w-full items-center gap-1 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300 transition-colors hover:text-ink-100"
+                className="flex h-7 w-full items-center gap-1 px-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300 transition-colors hover:text-ink-100"
               >
                 <motion.span animate={{ rotate: isCollapsed ? 0 : 90 }} transition={{ duration: 0.15 }}>
                   <ChevronRight size={12} />
                 </motion.span>
                 {GROUP_LABEL[group]}
-                <span className="ml-auto font-mono text-[10px] text-ink-400">
+                <span className="ml-auto font-mono text-xs text-ink-300">
                   {groupNodes.length}
                 </span>
               </button>
@@ -117,12 +117,12 @@ export function ContentExplorer() {
                                 size={13}
                                 className={cn(
                                   'shrink-0',
-                                  kind ? ACCENT_CLASS[kind.accent] : 'text-ink-400',
+                                  kind ? ACCENT_CLASS[kind.accent] : 'text-ink-300',
                                 )}
                               />
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-xs">{node.displayName}</span>
-                                <span className="block truncate font-mono text-[10px] text-ink-400">
+                                <span className="block truncate font-mono text-xs text-ink-300">
                                   {project.namespace}:{node.name}
                                 </span>
                               </span>
@@ -147,14 +147,28 @@ export function ContentExplorer() {
                                   ? 'Click again to delete'
                                   : `Delete ${node.displayName}`
                               }
+                              // The label carries the confirm step, so the
+                              // second click is not a silent surprise.
+                              aria-label={
+                                confirming === node.id
+                                  ? `Confirm deleting ${node.displayName}`
+                                  : `Delete ${node.displayName}`
+                              }
                               className={cn(
-                                'shrink-0 rounded p-1 transition-all',
+                                'tap-target grid size-7 shrink-0 place-items-center rounded',
+                                'transition-[opacity,background-color,color]',
+                                '[transition-duration:var(--duration-state)]',
                                 confirming === node.id
                                   ? 'bg-rose-500/20 text-rose-500 opacity-100'
-                                  : 'text-ink-400 opacity-0 hover:bg-ink-700 hover:text-rose-500 group-hover:opacity-100',
+                                  : cn(
+                                      'text-ink-300 opacity-0 hover:bg-ink-700 hover:text-rose-500',
+                                      // Revealed on keyboard focus too: a
+                                      // control you can tab to must be visible.
+                                      'group-hover:opacity-100 focus-visible:opacity-100',
+                                    ),
                               )}
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={14} aria-hidden="true" />
                             </button>
                           </div>
                         </motion.li>

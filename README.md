@@ -1,10 +1,18 @@
 # mmmmmmmmmmmmm
 
-A visual builder for Minecraft Bedrock add-ons. Fill in a form, drop in a PNG,
-get a valid `behavior_pack/` + `resource_pack/` — no hand-written JSON, no
-matching identifiers across two packs, no folder structure to maintain.
+A visual builder for Minecraft add-ons. Fill in a form, drop in a PNG, get a
+valid pack — no hand-written JSON, no matching identifiers across two packs, no
+folder structure to maintain.
 
-Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
+Builds for **Bedrock** and for **Java**, and is honest about the difference.
+Bedrock gets a `.mcaddon`. Java gets either a data pack that needs no mod loader
+at all, or a Gradle project for **Fabric, Quilt, Forge or NeoForge** — because a
+Java data pack cannot register a new block or item, and no exporter can work
+around that. Which route suits your add-on depends on what is in it, and the
+**Compatibility** panel answers that against your actual project.
+
+Targets **Bedrock 1.26.40** and **Java 1.21.1**, with legacy profiles for
+Bedrock 1.21.90 and Java 1.20.1.
 
 ---
 
@@ -44,8 +52,18 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
   plants it owns, these place anything anywhere — filtered by biome tag, pass and
   height. Feature and rule are generated together either way, so a distribution
   can never point at a feature that does not exist.
+- **One project, two games.** The same model exports as a Bedrock `.mcaddon`,
+  as a Java data pack and resource pack, and as a buildable mod project for four
+  loaders. Every target carries its verdict against your project before you tick
+  it, so shipping a block-heavy add-on as a data pack is allowed but never a
+  surprise.
 - **Save and Export are separate.** Save commits a version to your project repo;
-  Export builds a `.mcaddon` in the browser. Both require a changelog entry.
+  Export builds every target you picked and publishes them as one GitHub
+  release. Both require a changelog entry.
+- **Alpha, beta and release.** Every export becomes a tagged release. Alpha and
+  beta are pre-releases and never become "latest"; a release is tagged `v1.2.0`
+  and is what the repo points people at. Build numbers come from the tags
+  already in the repo, so two people exporting at once cannot collide.
 - **Preset inbox.** Anything another tool writes into `preset/` in the project
   repo appears in the app, ready to apply to the active save.
 
@@ -59,7 +77,9 @@ Targets **Bedrock 1.26.40** (stable, released 2026-08-04).
 | Presets | Ready-made content to drop in |
 | Preset inbox | Presets waiting in the project repo |
 | Versions | Save slots — switch between whole versions |
-| Settings | Namespace, target profile, GitHub and Worker credentials |
+| Compatibility | What survives on Bedrock, on a Java data pack and in a Java mod |
+| Releases | Every build published, with its channel and its files |
+| Settings | Namespace, target profiles, release defaults, GitHub and Worker credentials |
 
 `Ctrl/Cmd + K` opens the command palette.
 
@@ -77,6 +97,17 @@ stonecutter — live in `src/core/recipes/stations.ts`. The rest are yours: give
 block **Works as a crafting station** and a **Crafting tag** and it gets its own
 tab immediately, sized by its `craftingGridRows` / `craftingGridCols`. That is
 how a mod's own cooking pot ends up beside the furnace with nothing hardcoded.
+
+**Custom stations are the clearest case of the two platforms not being equal.**
+On Bedrock there is exactly one mechanism, `minecraft:crafting_table`, and a
+hard ceiling: the screen it opens is always the vanilla 3×3 grid, with no custom
+slot count, no custom background, no progress bar or fuel slot, and no recipe
+book entry for custom tags. The grid size you declare constrains the recipes you
+can author — which keeps a two-slot pot feeling like one in the builder — but
+the player still sees nine slots. On Java a station is a real menu and screen
+class, so the export generates one at exactly the size you asked for.
+[`docs/CRAFTING_STATIONS.md`](docs/CRAFTING_STATIONS.md) is the full list of
+what Bedrock cannot do and why.
 
 The furnace family shows a fuel slot because that is what the screen looks like,
 but Bedrock's furnace recipe carries no fuel — what burns is decided by the fuel
@@ -147,7 +178,7 @@ so no vanilla artwork is written into an exported `.mcaddon`.
 | | |
 |---|---|
 | **This repo** | the app itself |
-| **Project repo** | your add-on's data — save slots, preset inbox, exports, changelog. Configured in Settings; nothing is hardcoded. |
+| **Project repo** | your add-on's data — save slots, preset inbox, released builds, changelog. Defaults to [`manukmiber/plants-and-foods`](https://github.com/manukmiber/plants-and-foods); change it in Settings. |
 
 There is no database. The project repo *is* the store, which means version
 history comes free with git.
@@ -165,7 +196,9 @@ npm run build
 Then, in **Settings**:
 
 1. A fine-grained GitHub token with **contents: write** on your project repo,
-   plus the owner, repo name and branch. Press *Test connection*.
+   plus the owner, repo name and branch. Press *Test connection*. That one
+   permission covers saving *and* publishing releases — releases are contents,
+   not a separate scope.
 2. Your project namespace (`mmm` by default) — it prefixes every identifier and
    must not collide with `minecraft:`.
 3. A Worker passphrase, if the deployment sets one.
@@ -181,9 +214,13 @@ The app creates this as it goes:
 saves/<slot>/project.json     one complete add-on
 saves/<slot>/assets/*.png
 preset/*.json                 the inbox — applied files move to preset/applied/
-exports/*.mcaddon
+exports/<tag>/                every artifact from one export, by release tag
 CHANGELOG.md
 ```
+
+Exports are grouped by release tag rather than sitting loose, because one export
+now produces up to six files across two games and a flat folder stops being
+navigable immediately.
 
 ## Deploying
 
@@ -223,12 +260,26 @@ stays in the page where there is no request budget to blow.
 
 ## Documentation
 
+Start with the tutorial if you have not used this before; it goes from an empty
+project to a published release in one pass.
+
+- [`docs/TUTORIAL.md`](docs/TUTORIAL.md) — **start here.** End to end: an item, a
+  crop, a crafting station, recipes, world generation, and a release with six
+  files attached.
+- [`docs/PLATFORMS.md`](docs/PLATFORMS.md) — Bedrock vs Java, the full support
+  matrix, and why a Java data pack cannot add a block.
+- [`docs/CRAFTING_STATIONS.md`](docs/CRAFTING_STATIONS.md) — custom stations,
+  Bedrock's ceiling in detail, and what Java gives you instead.
+- [`docs/RELEASES.md`](docs/RELEASES.md) — alpha, beta and release channels,
+  what goes into a release, and how to undo one.
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — everything this builder does not
+  do, sorted by whether it is a platform limit, a gap, or deliberate.
 - [`docs/AI_ASSIST.md`](docs/AI_ASSIST.md) — hand this to Claude Code (or any
   other tool) when you want it to generate a preset the wizard cannot express.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the pieces fit together
   and why.
 - [`docs/SCHEMA.md`](docs/SCHEMA.md) — `project.json`, the preset format, and
-  every Bedrock `format_version` the generators emit.
+  every `format_version` the generators emit.
 
 ## Adding a new type of content
 

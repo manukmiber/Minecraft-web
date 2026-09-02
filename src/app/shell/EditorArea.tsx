@@ -29,7 +29,7 @@ const Preview3D = lazy(async () => ({
 
 function Loading({ label }: { label: string }) {
   return (
-    <div className="grid h-full place-items-center gap-2 text-xs text-ink-400">
+    <div className="grid h-full place-items-center gap-2 text-xs text-ink-300">
       <span className="shimmer h-1 w-24 rounded-full" />
       {label}
     </div>
@@ -88,7 +88,7 @@ export function EditorArea() {
         <>
           {node ? (
             <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-ink-800 bg-ink-900 px-3">
-              <div className="flex rounded-md border border-ink-600 bg-ink-850 p-0.5">
+              <div role="group" aria-label="Editor mode" className="flex rounded-md border border-edge bg-ink-850 p-0.5">
                 {(
                   [
                     { mode: 'wizard' as const, icon: Blocks, label: 'Wizard' },
@@ -103,7 +103,7 @@ export function EditorArea() {
                       if (mode === 'code' && primaryFileForNode) openFile(primaryFileForNode.path)
                     }}
                     className={cn(
-                      'relative flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] transition-colors',
+                      'relative flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-colors',
                       editorMode === mode ? 'text-ink-50' : 'text-ink-300 hover:text-ink-100',
                     )}
                   >
@@ -127,13 +127,14 @@ export function EditorArea() {
                 variant="ghost"
                 icon={previewOpen ? <EyeOff size={12} /> : <Eye size={12} />}
                 onClick={togglePreview}
+                aria-expanded={previewOpen}
               >
                 {previewOpen ? 'Hide preview' : 'Show preview'}
               </Button>
             </div>
           ) : null}
 
-          <div className="flex min-h-0 flex-1">
+          <div className="relative flex min-h-0 flex-1">
             <div className="min-w-0 flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -176,9 +177,15 @@ export function EditorArea() {
                   animate={{ width: 360, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-                  className="shrink-0 overflow-hidden border-l border-ink-800 bg-ink-950"
+                  className={cn(
+                    'shrink-0 overflow-hidden border-l border-ink-800 bg-ink-950',
+                    // Below 1024px the editor has no room to give, so the
+                    // preview floats above it at the same fixed width.
+                    'max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-10',
+                    'max-lg:!w-[min(360px,88vw)] max-lg:shadow-float',
+                  )}
                 >
-                  <div className="h-full w-[360px]">
+                  <div className="h-full w-[360px] max-lg:w-full">
                     {previewType === 'biome' ? (
                       <BiomePreview node={node} />
                     ) : (

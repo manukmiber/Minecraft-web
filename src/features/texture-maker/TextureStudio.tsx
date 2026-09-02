@@ -197,15 +197,15 @@ function AssetRow({
               className="size-full object-contain p-0.5 [image-rendering:pixelated]"
             />
           ) : (
-            <ImageOff size={13} className="text-ink-400" />
+            <ImageOff size={13} className="text-ink-300" />
           )}
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] text-ink-100" title={asset.fileName}>
+          <p className="truncate text-xs text-ink-100" title={asset.fileName}>
             {asset.fileName}
           </p>
-          <p className="flex items-center gap-1.5 text-[10px] text-ink-400">
+          <p className="flex items-center gap-1.5 text-xs text-ink-300">
             {asset.width && asset.height ? `${asset.width}x${asset.height}` : 'unknown size'}
             {used.length === 0 ? <Badge tone="warn">unused</Badge> : null}
           </p>
@@ -216,27 +216,27 @@ function AssetRow({
           onClick={onEdit}
           title="Edit in the texture maker"
           aria-label={`Edit ${asset.fileName}`}
-          className="rounded p-1 text-ink-400 transition-colors hover:bg-ink-750 hover:text-accent-400"
+          className="tap-target grid size-7 shrink-0 place-items-center rounded text-ink-300 transition-colors [transition-duration:var(--duration-state)] hover:bg-ink-750 hover:text-accent-400"
         >
-          <Pencil size={12} />
+          <Pencil size={14} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={download}
           title="Download the PNG"
           aria-label={`Download ${asset.fileName}`}
-          className="rounded p-1 text-ink-400 transition-colors hover:bg-ink-750 hover:text-ink-100"
+          className="tap-target grid size-7 shrink-0 place-items-center rounded text-ink-300 transition-colors [transition-duration:var(--duration-state)] hover:bg-ink-750 hover:text-ink-100"
         >
-          <Download size={12} />
+          <Download size={14} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={onDelete}
           title="Remove from the project"
           aria-label={`Remove ${asset.fileName}`}
-          className="rounded p-1 text-ink-400 transition-colors hover:bg-ink-750 hover:text-rose-500"
+          className="tap-target grid size-7 shrink-0 place-items-center rounded text-ink-300 transition-colors [transition-duration:var(--duration-state)] hover:bg-ink-750 hover:text-rose-500"
         >
-          <Trash2 size={12} />
+          <Trash2 size={14} aria-hidden="true" />
         </button>
       </div>
 
@@ -247,7 +247,7 @@ function AssetRow({
             return (
               <li
                 key={`${target.nodeId}-${target.slotKey}`}
-                className="flex items-center gap-1 rounded border border-ink-700 bg-ink-800 px-1.5 py-0.5 text-[10px] text-ink-300"
+                className="flex items-center gap-1 rounded border border-ink-700 bg-ink-800 px-1.5 py-0.5 text-xs text-ink-300"
               >
                 <Icon size={9} />
                 {target.nodeLabel} · {target.slotLabel}

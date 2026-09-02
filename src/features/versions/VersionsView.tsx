@@ -59,7 +59,7 @@ export function VersionsView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-ink-800 px-2 py-1.5">
-        <span className="flex-1 truncate text-[10px] uppercase tracking-[0.14em] text-ink-300">
+        <span className="flex-1 truncate text-xs uppercase tracking-[0.14em] text-ink-300">
           saves/ · {settings.githubOwner}/{settings.githubRepo}@{settings.githubBranch}
         </span>
         <Button size="sm" variant="ghost" onClick={() => void refresh()} disabled={loading}>
@@ -69,7 +69,7 @@ export function VersionsView() {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {error ? (
-          <div className="mb-2 flex gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 p-2.5 text-[11px] leading-relaxed text-rose-500">
+          <div className="mb-2 flex gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 p-2.5 text-xs leading-relaxed text-rose-500">
             <AlertTriangle size={14} className="mt-px shrink-0" />
             {error}
           </div>
@@ -96,10 +96,10 @@ export function VersionsView() {
                 isActive ? 'border-accent-500/40 bg-accent-500/8' : 'border-ink-700 bg-ink-850',
               )}
             >
-              <FolderGit2 size={14} className={isActive ? 'text-accent-500' : 'text-ink-400'} />
+              <FolderGit2 size={14} className={isActive ? 'text-accent-500' : 'text-ink-300'} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-mono text-xs text-ink-50">{slot.name}</p>
-                <p className="truncate text-[10px] text-ink-400">{slot.path}</p>
+                <p className="truncate text-xs text-ink-300">{slot.path}</p>
               </div>
 
               {isActive ? (

@@ -12,6 +12,9 @@ import { CheckCircle2, Cloud, Github, KeyRound, Package, Palette, XCircle } from
 
 import { Badge, Button, FieldRow, Section, Spinner, cn, inputClass } from '../../app/ui/primitives'
 import { TARGET_PROFILES } from '../../core/targets/profiles'
+import { JAVA_TARGET_PROFILES, getJavaProfile } from '../../core/targets/javaProfiles'
+import { CHANNELS, RELEASE_CHANNELS } from '../../core/export/release'
+import type { ReleaseChannel } from '../../core/export/release'
 import { isValidNamespace } from '../../core/util/id'
 import { github, r2 } from '../../state/services'
 import type { WorkerHealth } from '../../integrations/r2/client'
@@ -113,18 +116,87 @@ export function SettingsView() {
         <ul className="mt-1 flex flex-col gap-1 border-l border-ink-700 pl-2.5">
           {(TARGET_PROFILES.find((p) => p.id === project.targetProfileId) ?? TARGET_PROFILES[0])
             .notes.map((note) => (
-              <li key={note} className="text-[10.5px] leading-relaxed text-ink-400">
+              <li key={note} className="text-[10.5px] leading-relaxed text-ink-300">
                 {note}
               </li>
             ))}
         </ul>
       </Section>
 
+      <Section title="Java target">
+        <p className="pb-2 text-xs leading-relaxed text-ink-300">
+          Decides the data-pack folder names, the shape of every recipe file and the API the
+          generated mod compiles against — all three changed between these versions, and picking the
+          wrong one usually fails silently rather than loudly.
+        </p>
+
+        <FieldRow label="Minecraft version">
+          <select
+            value={settings.javaTargetProfileId}
+            onChange={(event) => settings.set('javaTargetProfileId', event.target.value)}
+            className={inputClass}
+          >
+            {JAVA_TARGET_PROFILES.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.label} — {profile.engineLabel}
+              </option>
+            ))}
+          </select>
+        </FieldRow>
+
+        <ul className="mt-1 flex flex-col gap-1 border-l border-ink-700 pl-2.5">
+          {getJavaProfile(settings.javaTargetProfileId).notes.map((note) => (
+            <li key={note} className="text-[10.5px] leading-relaxed text-ink-300">
+              {note}
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section title="Releases">
+        <p className="pb-2 text-xs leading-relaxed text-ink-300">
+          Every export can publish its files as one GitHub release. The channel decides the tag and
+          whether GitHub marks the build a pre-release — alpha and beta never become the
+          repository&rsquo;s latest release, a stable one does.
+        </p>
+
+        <label className="tap-target flex min-h-9 cursor-pointer items-center gap-2.5 pb-1 text-sm text-ink-200">
+          <input
+            type="checkbox"
+            checked={settings.publishRelease}
+            onChange={(event) => settings.set('publishRelease', event.target.checked)}
+            className="size-4 shrink-0 accent-[var(--color-accent-500)]"
+          />
+          Publish a release by default
+        </label>
+
+        <FieldRow
+          label="Default channel"
+          help="What a fresh export starts on. Promoting a build to a stable release stays a deliberate act."
+        >
+          <select
+            value={settings.releaseChannel}
+            onChange={(event) => settings.set('releaseChannel', event.target.value as ReleaseChannel)}
+            className={inputClass}
+          >
+            {RELEASE_CHANNELS.map((id) => (
+              <option key={id} value={id}>
+                {CHANNELS[id].label} — {CHANNELS[id].prerelease ? 'pre-release' : 'marked latest'}
+              </option>
+            ))}
+          </select>
+        </FieldRow>
+
+        <p className="mt-1 text-xs leading-relaxed text-ink-300">
+          {CHANNELS[settings.releaseChannel].summary}
+        </p>
+      </Section>
+
       <Section title="Project repository">
-        <p className="pb-2 text-[11px] leading-relaxed text-ink-300">
-          This repo is the database: save slots, the preset inbox, the changelog and exported
-          archives all live in it. Keep the token to a fine-grained one with contents write access
-          on that single repository.
+        <p className="pb-2 text-xs leading-relaxed text-ink-300">
+          This repo is the database: save slots, the preset inbox, the changelog and every exported
+          build live in it. A fine-grained token needs <strong>contents: write</strong> to save and
+          to publish releases — releases are contents, not a separate permission.
         </p>
 
         <FieldRow label="GitHub token" help="Stored in this browser only. Sent only to api.github.com.">
@@ -151,7 +223,7 @@ export function SettingsView() {
             <input
               value={settings.githubRepo}
               onChange={(event) => settings.set('githubRepo', event.target.value.trim())}
-              placeholder="my-addon-data"
+              placeholder="plants-and-foods"
               className={cn(inputClass, 'font-mono')}
             />
           </FieldRow>
@@ -201,7 +273,7 @@ export function SettingsView() {
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               className={cn(
-                'flex items-center gap-1.5 text-[11px]',
+                'flex items-center gap-1.5 text-xs',
                 repoStatus.ok ? 'text-mint-500' : 'text-rose-500',
               )}
             >
@@ -213,7 +285,7 @@ export function SettingsView() {
       </Section>
 
       <Section title="Texture storage">
-        <p className="pb-2 text-[11px] leading-relaxed text-ink-300">
+        <p className="pb-2 text-xs leading-relaxed text-ink-300">
           Dropped PNGs are cached in this browser and pushed to R2 through the Worker, which holds
           the bucket binding. No R2 credential ever reaches the page.
         </p>
@@ -224,9 +296,9 @@ export function SettingsView() {
           ) : health ? (
             <Cloud size={14} className={health.bucketBound ? 'text-mint-500' : 'text-amber-500'} />
           ) : (
-            <Cloud size={14} className="text-ink-400" />
+            <Cloud size={14} className="text-ink-300" />
           )}
-          <div className="flex-1 text-[11px] leading-relaxed">
+          <div className="flex-1 text-xs leading-relaxed">
             {checkingWorker ? (
               <span className="text-ink-300">Checking the Worker…</span>
             ) : !health ? (
@@ -282,7 +354,7 @@ export function SettingsView() {
       </Section>
 
       <Section title="About">
-        <div className="flex flex-col gap-2 text-[11px] leading-relaxed text-ink-300">
+        <div className="flex flex-col gap-2 text-xs leading-relaxed text-ink-300">
           <p className="flex items-center gap-2">
             <Package size={13} className="text-accent-500" />
             <span>
@@ -290,7 +362,7 @@ export function SettingsView() {
             </span>
           </p>
           <p className="flex items-center gap-2">
-            <KeyRound size={13} className="text-ink-400" />
+            <KeyRound size={13} className="text-ink-300" />
             Single-user by design — there is no account system and no server-side copy of your
             credentials.
           </p>

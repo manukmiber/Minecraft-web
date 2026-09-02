@@ -118,7 +118,11 @@ summary.
 | `solid` | boolean | off removes collision and selection boxes |
 | `flammable`, `lootSelf` | boolean | |
 | `tags` | string[] | written into `minecraft:tags` |
-| `isCraftingStation`, `craftingTag` | boolean, string | gives the block its own crafting screen |
+| `isCraftingStation` | boolean | gives the block its own crafting screen |
+| `craftingTag` | string | recipes carry this to reach the station. `^[a-z][a-z0-9_]*$`, max 64 chars |
+| `craftingExtraTags` | string[] | extra tags the station answers to; 64 tags total |
+| `craftingScreenTitle` | string | window title; defaults to the display name |
+| `craftingGridRows`, `craftingGridCols` | 1–3 | see the note under `recipe` |
 
 Texture slots: `main` (all faces), `up`, `down`.
 
@@ -243,8 +247,15 @@ There are two ways to make something "cooked":
   recipe that happens to require the pan, and needs nothing else; or
 - give the block `isCraftingStation` and a `craftingTag`, which gives it its own
   crafting screen in-game and its own tab in the builder. `craftingGridRows` and
-  `craftingGridCols` (1–3, default 3) narrow the shape a recipe may take; the
-  in-game screen is always 3x3.
+  `craftingGridCols` (1–3, default 3) narrow the shape a recipe may take.
+
+  **On Bedrock the in-game screen is always 3x3** — the rows and columns
+  constrain what you can author, not what the player sees, and there is no
+  custom background, progress bar or fuel slot to be had. On Java the export
+  generates a menu and screen at exactly the size you declared.
+  `docs/CRAFTING_STATIONS.md` has the full comparison. Do not generate a preset
+  that assumes a Bedrock station can cook over time or keep an inventory; it
+  cannot.
 
 
 ### World placement — shared by `scatter`, `tree` and `structure`
@@ -384,9 +395,27 @@ JSON at all:
 
 ## Things worth knowing before you generate
 
-**Format versions are not yours to choose.** They live in one target profile
-(`src/core/targets/profiles.ts`) and the generators read them from there. Do not
-put `format_version` in a preset.
+**Format versions are not yours to choose.** They live in the target profiles
+(`src/core/targets/profiles.ts` for Bedrock, `javaProfiles.ts` for Java) and the
+generators read them from there. Do not put `format_version` in a preset.
+
+**A preset is platform-neutral, and that is the point.** You are writing field
+values against the content kinds, not files for one game. The same preset
+exports as a Bedrock add-on, as a Java data pack and as a mod for four loaders,
+and the generators handle every difference between them. Do not write
+Bedrock-shaped JSON into a preset in the hope it passes through.
+
+**Use Bedrock identifiers for vanilla blocks.** `minecraft:grass`,
+`minecraft:red_flower` and so on. The Java export rewrites the ones that are
+spelled differently there — `minecraft:short_grass`, `minecraft:poppy` — so
+writing the Bedrock name is correct for both. Writing the Java name is not: it
+is not rewritten in the other direction.
+
+**Some content simply cannot reach a Java data pack.** Blocks, items, crops and
+entities need a mod loader, because a data pack cannot register them. That is
+not something a preset can work around, and it is worth knowing before you
+generate an add-on made entirely of custom blocks for someone who wanted a data
+pack. `docs/PLATFORMS.md` has the matrix.
 
 **A note on crop growth.** Bedrock's modern block parser removed data-driven
 block events and deprecated `minecraft:random_ticking`, so a block that changes

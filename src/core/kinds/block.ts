@@ -8,6 +8,12 @@
 
 import type { ContentKind } from '../registry/types'
 import { BP } from '../generators/emit'
+import { stationFromBlock } from '../recipes/stations'
+import {
+  BEDROCK_CRAFTING_TABLE_LIMITS,
+  validateCraftingTag,
+  validateCraftingTags,
+} from '../recipes/stationLimits'
 import {
   MENU_CATEGORY_OPTIONS,
   RENDER_METHOD_OPTIONS,
@@ -192,7 +198,34 @@ export const blockKind: ContentKind = {
       group: 'Advanced',
       placeholder: 'cooking_pot',
       when: (data) => bool(data, 'isCraftingStation'),
-      help: 'Recipes made at this station carry this tag. The Recipe builder gives the block its own tab as soon as it is set.',
+      help: `Recipes made at this station carry this tag. The Recipe builder gives the block its own tab as soon as it is set. Lowercase letters, digits and underscores, up to ${BEDROCK_CRAFTING_TABLE_LIMITS.maxTagLength} characters.`,
+      validate: (value) =>
+        typeof value === 'string' ? (validateCraftingTag(value)?.message ?? null) : null,
+    },
+    {
+      key: 'craftingExtraTags',
+      label: 'Also accepts',
+      type: 'string-list',
+      group: 'Advanced',
+      when: (data) => bool(data, 'isCraftingStation'),
+      help: `Extra tags this station answers to — add "crafting_table" to make the block double as a workbench. Bedrock allows ${BEDROCK_CRAFTING_TABLE_LIMITS.maxTags} tags in total.`,
+      validate: (value) =>
+        Array.isArray(value)
+          ? (validateCraftingTags(value.filter((v): v is string => typeof v === 'string'))?.message ??
+            null)
+          : null,
+    },
+    {
+      key: 'craftingScreenTitle',
+      label: 'Screen title',
+      type: 'text',
+      group: 'Advanced',
+      when: (data) => bool(data, 'isCraftingStation'),
+      help: 'Drawn at the top of the crafting screen. Defaults to the block\u2019s display name.',
+      validate: (value) =>
+        typeof value === 'string' && value.length > BEDROCK_CRAFTING_TABLE_LIMITS.maxTableNameLength
+          ? `Bedrock truncates table_name past ${BEDROCK_CRAFTING_TABLE_LIMITS.maxTableNameLength} characters.`
+          : null,
     },
     {
       key: 'craftingGridRows',
@@ -203,7 +236,7 @@ export const blockKind: ContentKind = {
       max: 3,
       step: 1,
       when: (data) => bool(data, 'isCraftingStation'),
-      help: 'How many rows the station\u2019s tab offers. The in-game screen is always 3x3 — this only constrains the shape a recipe may take, which is what makes a two-slot pot feel like a two-slot pot.',
+      help: 'How many rows the station\u2019s tab offers. On Bedrock the in-game screen is always 3x3, so this only constrains the shape a recipe may take; the Java mod export draws a screen this exact size.',
     },
     {
       key: 'craftingGridCols',
@@ -243,6 +276,8 @@ export const blockKind: ContentKind = {
     lootSelf: true,
     isCraftingStation: false,
     craftingTag: '',
+    craftingExtraTags: [],
+    craftingScreenTitle: '',
     craftingGridRows: 3,
     craftingGridCols: 3,
   }),
@@ -267,6 +302,7 @@ export const blockKind: ContentKind = {
 
     const tags = list(data, 'tags')
     const solid = bool(data, 'solid', true)
+    const station = stationFromBlock(ctx.project, node.id)
 
     const components = compact({
       'minecraft:material_instances': materialInstances(
@@ -294,13 +330,14 @@ export const blockKind: ContentKind = {
         ? { catch_chance_modifier: 5, destroy_chance_modifier: 20 }
         : undefined,
       'minecraft:loot': bool(data, 'lootSelf', true) ? undefined : 'loot_tables/empty.json',
-      'minecraft:crafting_table':
-        bool(data, 'isCraftingStation') && str(data, 'craftingTag').trim()
-          ? {
-              table_name: node.displayName,
-              crafting_tags: [str(data, 'craftingTag').trim()],
-            }
-          : undefined,
+      // The tag list and the screen title come from the station resolver so the
+      // Recipe builder's tabs and the emitted component can never disagree.
+      'minecraft:crafting_table': station
+        ? {
+            table_name: station.screenTitle ?? node.displayName,
+            crafting_tags: station.tags.slice(0, BEDROCK_CRAFTING_TABLE_LIMITS.maxTags),
+          }
+        : undefined,
       // 1.26.20+ requires tags to live inside this component rather than
       // floating as top-level entries in `components`.
       'minecraft:tags': target.rules.tagsAsComponent && tags.length > 0 ? tags : undefined,
