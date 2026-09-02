@@ -19,6 +19,7 @@ import type { BoneSpec, GeometrySpec } from '../../core/generators/geometry'
 import type { ContentNode } from '../../core/model/types'
 import { getKind } from '../../core/registry/types'
 import { useProject } from '../../state/project'
+import { vanillaTexture, vanillaTextureUrl } from '../../core/data/vanillaTextures'
 import { blockColor } from '../editor-form/LayerGridField'
 import { filledCells, gridSignature, voxelGrid } from '../../core/kinds/voxels'
 import { useAssetUrl } from '../textures/useAssetUrl'
@@ -360,8 +361,9 @@ function StructureBlocks({
   positions: Array<[number, number, number]>
   namespace: string
 }) {
-  // Only this project's own blocks can be textured — vanilla PNGs are not in
-  // the pack — so anything else is drawn as its painter colour.
+  // This project's own blocks wear their own texture; vanilla identifiers wear
+  // the Faithful artwork the app ships, and anything neither covers falls back
+  // to the painter's colour so the two views still agree.
   const project = useProject((s) => s.project)
   const owner =
     block.startsWith(`${namespace}:`)
@@ -375,14 +377,37 @@ function StructureBlocks({
   const asset = assetId ? (project.assets.find((a) => a.id === assetId) ?? null) : null
   const texture = usePixelTexture(useAssetUrl(asset))
 
-  const material = useMemo(
-    () =>
-      texture
-        ? new THREE.MeshLambertMaterial({ map: texture })
-        : new THREE.MeshLambertMaterial({ color: new THREE.Color(blockColor(block)) }),
-    [texture, block],
+  // Faces are only known for blocks; an item identifier painted into a build
+  // (a torch, a flower) wears its inventory sprite on every side.
+  const vanilla = owner ? null : vanillaTexture(block)
+  const top = usePixelTexture(vanilla?.faces ? vanillaTextureUrl(vanilla.faces.top) : null)
+  const side = usePixelTexture(vanilla ? vanillaTextureUrl(vanilla.faces?.side ?? vanilla.icon) : null)
+  const bottom = usePixelTexture(vanilla?.faces ? vanillaTextureUrl(vanilla.faces.bottom) : null)
+
+  const material = useMemo(() => {
+    if (texture) return new THREE.MeshLambertMaterial({ map: texture })
+    if (!side) return new THREE.MeshLambertMaterial({ color: new THREE.Color(blockColor(block)) })
+
+    // Glass, leaves and anything cut out of a square need their empty pixels
+    // dropped rather than drawn as black, and lit from both sides once you can
+    // see through to the far face.
+    const cutout = vanilla?.cutout
+      ? { transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }
+      : {}
+    const face = (map: THREE.Texture) => new THREE.MeshLambertMaterial({ map, ...cutout })
+
+    // three.js takes box faces in +x, -x, +y, -y, +z, -z order, so the four
+    // walls share one material and the lid and floor get their own.
+    const walls = face(side)
+    return [walls, walls, face(top ?? side), face(bottom ?? side), walls, walls]
+  }, [texture, top, side, bottom, vanilla, block])
+
+  useEffect(
+    () => () => {
+      for (const one of new Set(Array.isArray(material) ? material : [material])) one.dispose()
+    },
+    [material],
   )
-  useEffect(() => () => material.dispose(), [material])
 
   return (
     <>

@@ -3,11 +3,13 @@
  * and the in-game preview.
  *
  * Textures you made are shown for real, pixelated and unsmoothed. Vanilla
- * identifiers get a tinted monogram instead — this app ships no Minecraft
- * artwork, and a wrong icon would be worse than an honest placeholder.
+ * identifiers fall back to the Faithful artwork the app ships, and anything
+ * neither source covers gets a tinted monogram — an honest placeholder beats a
+ * wrong icon.
  */
 
 import { cn } from '../../app/ui/primitives'
+import { vanillaTexture, vanillaTextureUrl } from '../../core/data/vanillaTextures'
 import { useProject } from '../../state/project'
 import { useAssetUrl } from '../textures/useAssetUrl'
 import { monogram, shortLabel, tintFor, type CatalogEntry } from './catalog'
@@ -30,7 +32,9 @@ export function ItemTile({
   const asset = entry?.assetId
     ? (project.assets.find((candidate) => candidate.id === entry.assetId) ?? null)
     : null
-  const url = useAssetUrl(asset)
+  const own = useAssetUrl(asset)
+  const vanilla = vanillaTexture(identifier)
+  const url = own ?? (vanilla ? vanillaTextureUrl(vanilla.icon) : null)
   const label = entry?.label ?? shortLabel(identifier)
 
   return (
