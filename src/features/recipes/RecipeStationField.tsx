@@ -195,7 +195,7 @@ export function RecipeStationField({
               title={entry.hint}
               aria-pressed={active}
               className={cn(
-                'relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] transition-colors',
+                'relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors',
                 active ? 'text-ink-50' : 'text-ink-300 hover:text-ink-100',
               )}
             >
@@ -209,7 +209,7 @@ export function RecipeStationField({
               <Icon size={12} className="relative" />
               <span className="relative">{entry.label}</span>
               {entry.blockNodeId ? (
-                <span className="relative text-[9px] text-mint-500">yours</span>
+                <span className="relative text-xs text-mint-500">yours</span>
               ) : null}
             </button>
           )
@@ -269,7 +269,7 @@ export function RecipeStationField({
                           'rounded border px-2 py-0.5 text-[10.5px] transition-colors',
                           (shapeless ? 'shapeless' : 'shaped') === option.value
                             ? 'border-accent-500/60 bg-accent-500/15 text-accent-400'
-                            : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',
+                            : 'border-edge bg-ink-800 text-ink-200 hover:border-ink-300',
                         )}
                         title={
                           option.value === 'shaped'
@@ -310,7 +310,7 @@ export function RecipeStationField({
                     label="Fuel"
                   />
                 ) : (
-                  <span className="text-[10px] text-ink-400">no fuel slot</span>
+                  <span className="text-xs text-ink-300">no fuel slot</span>
                 )}
               </div>
             )}
@@ -331,7 +331,7 @@ export function RecipeStationField({
                 large
               />
               <div className="flex items-center gap-1">
-                <label className="text-[10px] text-ink-400" htmlFor="recipe-result-count">
+                <label className="text-xs text-ink-300" htmlFor="recipe-result-count">
                   x
                 </label>
                 <input
@@ -343,7 +343,7 @@ export function RecipeStationField({
                   onChange={(event) =>
                     onPatch({ resultCount: Math.max(1, Number(event.target.value) || 1) })
                   }
-                  className="h-6 w-14 rounded border border-ink-600 bg-ink-850 px-1.5 font-mono text-[11px] text-ink-50 focus:border-accent-500 focus:outline-none"
+                  className="h-8 w-16 rounded border border-edge bg-ink-850 px-1.5 font-mono text-xs text-ink-50 focus:border-accent-500 focus:outline-none focus:shadow-[0_0_0_3px_var(--color-accent-glow)]"
                 />
               </div>
               <button
@@ -366,7 +366,7 @@ export function RecipeStationField({
                 exit={{ opacity: 0, y: -4 }}
                 className="rounded-lg border border-ink-700 bg-ink-850 p-2.5"
               >
-                <p className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                <p className="pb-1.5 text-xs font-semibold uppercase tracking-wider text-ink-300">
                   {slotLabel(selected)} — type an identifier, or pick one on the right
                 </p>
                 <input
@@ -397,11 +397,11 @@ export function RecipeStationField({
 
             {pattern ? (
               <div className="rounded-lg border border-ink-700 bg-ink-850/60 p-2.5">
-                <p className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                <p className="pb-1.5 text-xs font-semibold uppercase tracking-wider text-ink-300">
                   Generated pattern
                 </p>
                 <div className="flex flex-wrap items-start gap-4">
-                  <pre className="rounded border border-ink-700 bg-ink-950 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-mint-500">
+                  <pre className="rounded border border-ink-700 bg-ink-950 px-2 py-1.5 font-mono text-xs leading-relaxed text-mint-500">
                     {pattern.pattern.map((row) => `"${row}"`).join('\n')}
                   </pre>
                   <ul className="flex flex-col gap-0.5">
@@ -502,7 +502,7 @@ function Slot({
             : selected
               ? 'border-accent-500 bg-accent-500/10'
               : value
-                ? 'border-ink-600 bg-ink-800 hover:border-ink-500'
+                ? 'border-edge bg-ink-800 hover:border-ink-300'
                 : 'border-dashed border-ink-700 bg-ink-900 hover:border-ink-500',
         )}
       >
@@ -514,7 +514,7 @@ function Slot({
             </span>
           </>
         ) : (
-          <span className="text-[9px] text-ink-500">{label}</span>
+          <span className="text-xs text-ink-500">{label}</span>
         )}
       </button>
 
@@ -523,7 +523,7 @@ function Slot({
           type="button"
           onClick={onClear}
           aria-label={`Clear ${label}`}
-          className="absolute -right-1 -top-1 rounded-full border border-ink-600 bg-ink-900 p-0.5 text-ink-400 opacity-0 transition-opacity hover:text-rose-500 focus-visible:opacity-100 group-hover:opacity-100"
+          className="tap-target absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border border-ink-600 bg-ink-900 text-ink-300 opacity-0 transition-opacity [transition-duration:var(--duration-state)] hover:text-rose-500 focus-visible:opacity-100 group-hover:opacity-100"
         >
           <X size={9} />
         </button>
@@ -539,7 +539,7 @@ function Note({ tone, children }: { tone: 'warn' | 'error' | 'info' | 'good'; ch
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'flex items-start gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] leading-relaxed',
+        'flex items-start gap-1.5 rounded-md border px-2.5 py-1.5 text-xs leading-relaxed',
         tone === 'error' && 'border-rose-500/40 bg-rose-500/10 text-rose-500',
         tone === 'warn' && 'border-amber-500/40 bg-amber-500/10 text-amber-500',
         tone === 'info' && 'border-ink-600 bg-ink-850 text-ink-300',

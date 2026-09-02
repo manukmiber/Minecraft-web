@@ -77,7 +77,7 @@ function TreeNode({
           <motion.span
             animate={{ rotate: isCollapsed ? 0 : 90 }}
             transition={{ duration: 0.15 }}
-            className="text-ink-400"
+            className="text-ink-300"
           >
             <ChevronRight size={11} />
           </motion.span>
@@ -128,7 +128,7 @@ function TreeNode({
       )}
     >
       <span className="w-[11px]" />
-      <Icon size={12} className={overridden ? 'text-amber-500' : 'text-ink-400'} />
+      <Icon size={12} className={overridden ? 'text-amber-500' : 'text-ink-300'} />
       <span className="truncate">{node.name}</span>
       {overridden ? <PenLine size={10} className="ml-auto shrink-0 text-amber-500" /> : null}
     </button>

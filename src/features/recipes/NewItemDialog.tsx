@@ -8,11 +8,12 @@
  * second way for content to come into existence.
  */
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useId } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Boxes, Image as ImageIcon, Pencil, Sparkles, Upload, X } from 'lucide-react'
 
 import { Badge, Button, FieldRow, Spinner, cn, inputClass } from '../../app/ui/primitives'
+import { useModalA11y } from '../../app/ui/useModalA11y'
 import { MENU_CATEGORY_OPTIONS } from '../../core/kinds/shared'
 import type { AssetRef } from '../../core/model/types'
 import { slugify } from '../../core/util/id'
@@ -160,11 +161,16 @@ export function NewItemDialog({
     onClose()
   }
 
+  // Escape, a contained Tab cycle, and focus handed back on close.
+  const dialogRef = useModalA11y<HTMLDivElement>(open, onClose)
+
   return (
     <AnimatePresence>
       {open ? (
         <motion.div
-          className="fixed inset-0 z-40 flex items-start justify-center bg-ink-950/65 p-6 pt-[8vh] backdrop-blur-sm"
+          // Measured against the texture previews this can open over: 65% left
+          // bright pixel art bleeding through the panel edge.
+          className="fixed inset-0 z-40 flex items-start justify-center bg-ink-950/[0.78] p-4 pt-[6vh] backdrop-blur-sm sm:p-6 sm:pt-[8vh]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -174,6 +180,10 @@ export function NewItemDialog({
           }}
         >
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-item-title"
             initial={{ opacity: 0, y: -10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6 }}
@@ -181,15 +191,21 @@ export function NewItemDialog({
             className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl border border-ink-600 bg-ink-850 shadow-float"
           >
             <header className="sticky top-0 flex items-center gap-2 border-b border-ink-700 bg-ink-850/95 px-4 py-3 backdrop-blur">
-              <Sparkles size={14} className="text-mint-500" />
-              <h3 className="flex-1 text-xs font-semibold text-ink-50">New result item</h3>
+              <Sparkles size={16} aria-hidden="true" className="text-mint-500" />
+              <h3 id="new-item-title" className="flex-1 text-base font-semibold text-ink-50">
+                New result item
+              </h3>
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close"
-                className="rounded p-1 text-ink-300 transition-colors hover:bg-ink-750 hover:text-ink-50"
+                aria-label="Close without creating"
+                className={cn(
+                  'tap-target grid size-8 shrink-0 place-items-center rounded text-ink-300',
+                  'transition-colors [transition-duration:var(--duration-state)]',
+                  'hover:bg-ink-750 hover:text-ink-50',
+                )}
               >
-                <X size={14} />
+                <X size={16} aria-hidden="true" />
               </button>
             </header>
 
@@ -211,7 +227,7 @@ export function NewItemDialog({
                 htmlFor="new-item-id"
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[11px] text-ink-400">{project.namespace}:</span>
+                  <span className="font-mono text-xs text-ink-300">{project.namespace}:</span>
                   <input
                     id="new-item-id"
                     value={effectiveName}
@@ -228,7 +244,7 @@ export function NewItemDialog({
                 <div className="flex items-center gap-2">
                   <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-dashed border-ink-600 bg-ink-900">
                     {uploading ? (
-                      <Spinner />
+                      <Spinner label="Uploading the icon" />
                     ) : url ? (
                       <img
                         src={url}
@@ -236,19 +252,19 @@ export function NewItemDialog({
                         className="size-full object-contain p-1 [image-rendering:pixelated]"
                       />
                     ) : (
-                      <ImageIcon size={16} className="text-ink-400" />
+                      <ImageIcon size={18} aria-hidden="true" className="text-ink-300" />
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Button
                       size="sm"
                       variant="subtle"
-                      icon={<Upload size={12} />}
+                      icon={<Upload size={14} />}
                       onClick={() => fileRef.current?.click()}
                     >
                       Upload PNG
                     </Button>
-                    <Button size="sm" variant="primary" icon={<Pencil size={12} />} onClick={draw}>
+                    <Button size="sm" variant="primary" icon={<Pencil size={14} />} onClick={draw}>
                       {asset ? 'Edit in texture maker' : 'Draw it'}
                     </Button>
                   </div>
@@ -291,9 +307,11 @@ export function NewItemDialog({
                             step={1}
                             value={nutrition}
                             onChange={(event) => setNutrition(Number(event.target.value))}
-                            className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-ink-600 accent-[var(--color-accent-500)]"
+                            aria-label="Nutrition"
+                            aria-valuetext={`${nutrition} half-drumsticks`}
+                            className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-ink-600 accent-[var(--color-accent-500)]"
                           />
-                          <span className="w-8 text-right font-mono text-[11px] text-ink-100">
+                          <span className="w-8 text-right font-mono text-xs text-ink-100">
                             {nutrition}
                           </span>
                         </div>
@@ -327,9 +345,9 @@ export function NewItemDialog({
               />
             </div>
 
-            <footer className="sticky bottom-0 flex items-center gap-2 border-t border-ink-700 bg-ink-850/95 px-4 py-3 backdrop-blur">
-              <p className="flex min-w-0 flex-1 flex-wrap items-center gap-1 text-[11px] text-ink-400">
-                <Boxes size={11} />
+            <footer className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-ink-700 bg-ink-850/95 px-4 py-3 backdrop-blur">
+              <p className="flex min-w-0 flex-1 flex-wrap items-center gap-1 text-xs text-ink-300">
+                <Boxes size={14} aria-hidden="true" />
                 Creates
                 {placeable ? <Badge tone="accent">block</Badge> : null}
                 {!placeable || edible ? <Badge tone="good">item</Badge> : null}
@@ -338,9 +356,20 @@ export function NewItemDialog({
               <Button size="sm" variant="subtle" onClick={onClose}>
                 Cancel
               </Button>
-              <Button size="sm" variant="primary" disabled={!ready} onClick={submit}>
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={!ready}
+                aria-describedby={ready ? undefined : 'new-item-blocked'}
+                onClick={submit}
+              >
                 Create and use
               </Button>
+              {ready ? null : (
+                <span id="new-item-blocked" className="sr-only">
+                  Give the item a name and an identifier first.
+                </span>
+              )}
             </footer>
 
             <input
@@ -371,29 +400,42 @@ function Toggle({
   value: boolean
   onChange(next: boolean): void
 }) {
+  const id = useId()
+  const helpId = `${id}-help`
+
   return (
     <div className="flex items-start justify-between gap-3 py-2">
       <div className="min-w-0">
-        <p className="text-[11px] font-medium text-ink-100">{label}</p>
-        {help ? <p className="pt-0.5 text-[11px] leading-relaxed text-ink-300">{help}</p> : null}
+        <label htmlFor={id} className="text-sm font-medium text-ink-100">
+          {label}
+        </label>
+        {help ? (
+          <p id={helpId} className="pt-0.5 text-xs leading-relaxed text-ink-300">
+            {help}
+          </p>
+        ) : null}
       </div>
       <button
+        id={id}
         type="button"
         role="switch"
         aria-checked={value}
-        aria-label={label}
+        aria-describedby={help ? helpId : undefined}
         onClick={() => onChange(!value)}
         className={cn(
-          'relative mt-0.5 h-5 w-9 shrink-0 rounded-full border transition-colors',
-          value ? 'border-accent-500 bg-accent-500/30' : 'border-ink-600 bg-ink-800',
+          'tap-target relative mt-0.5 h-6 w-11 shrink-0 rounded-full border',
+          'transition-colors [transition-duration:var(--duration-state)]',
+          value ? 'border-accent-500 bg-accent-500/30' : 'border-edge bg-ink-800',
         )}
       >
         <motion.span
           layout
           transition={{ type: 'spring', stiffness: 620, damping: 34 }}
           className={cn(
-            'absolute top-0.5 size-3.5 rounded-full',
-            value ? 'left-[18px] bg-accent-500' : 'left-0.5 bg-ink-400',
+            'absolute top-[3px] size-4 rounded-full',
+            // On is filled accent, off is a plain knob pushed left: position and
+            // fill both change, so the state does not rest on colour alone.
+            value ? 'left-[23px] bg-accent-500' : 'left-[3px] bg-ink-300',
           )}
         />
       </button>

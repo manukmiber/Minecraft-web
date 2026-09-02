@@ -113,7 +113,7 @@ export function SettingsView() {
         <ul className="mt-1 flex flex-col gap-1 border-l border-ink-700 pl-2.5">
           {(TARGET_PROFILES.find((p) => p.id === project.targetProfileId) ?? TARGET_PROFILES[0])
             .notes.map((note) => (
-              <li key={note} className="text-[10.5px] leading-relaxed text-ink-400">
+              <li key={note} className="text-[10.5px] leading-relaxed text-ink-300">
                 {note}
               </li>
             ))}
@@ -121,7 +121,7 @@ export function SettingsView() {
       </Section>
 
       <Section title="Project repository">
-        <p className="pb-2 text-[11px] leading-relaxed text-ink-300">
+        <p className="pb-2 text-xs leading-relaxed text-ink-300">
           This repo is the database: save slots, the preset inbox, the changelog and exported
           archives all live in it. Keep the token to a fine-grained one with contents write access
           on that single repository.
@@ -201,7 +201,7 @@ export function SettingsView() {
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               className={cn(
-                'flex items-center gap-1.5 text-[11px]',
+                'flex items-center gap-1.5 text-xs',
                 repoStatus.ok ? 'text-mint-500' : 'text-rose-500',
               )}
             >
@@ -213,7 +213,7 @@ export function SettingsView() {
       </Section>
 
       <Section title="Texture storage">
-        <p className="pb-2 text-[11px] leading-relaxed text-ink-300">
+        <p className="pb-2 text-xs leading-relaxed text-ink-300">
           Dropped PNGs are cached in this browser and pushed to R2 through the Worker, which holds
           the bucket binding. No R2 credential ever reaches the page.
         </p>
@@ -224,9 +224,9 @@ export function SettingsView() {
           ) : health ? (
             <Cloud size={14} className={health.bucketBound ? 'text-mint-500' : 'text-amber-500'} />
           ) : (
-            <Cloud size={14} className="text-ink-400" />
+            <Cloud size={14} className="text-ink-300" />
           )}
-          <div className="flex-1 text-[11px] leading-relaxed">
+          <div className="flex-1 text-xs leading-relaxed">
             {checkingWorker ? (
               <span className="text-ink-300">Checking the Worker…</span>
             ) : !health ? (
@@ -282,7 +282,7 @@ export function SettingsView() {
       </Section>
 
       <Section title="About">
-        <div className="flex flex-col gap-2 text-[11px] leading-relaxed text-ink-300">
+        <div className="flex flex-col gap-2 text-xs leading-relaxed text-ink-300">
           <p className="flex items-center gap-2">
             <Package size={13} className="text-accent-500" />
             <span>
@@ -290,7 +290,7 @@ export function SettingsView() {
             </span>
           </p>
           <p className="flex items-center gap-2">
-            <KeyRound size={13} className="text-ink-400" />
+            <KeyRound size={13} className="text-ink-300" />
             Single-user by design — there is no account system and no server-side copy of your
             credentials.
           </p>

@@ -50,7 +50,7 @@ export function ItemTile({
         />
       ) : (
         <span
-          className="grid size-full place-items-center text-[10px] font-semibold text-ink-50/90"
+          className="grid size-full place-items-center text-xs font-semibold text-ink-50/90"
           style={{ background: tintFor(identifier || 'empty') }}
         >
           {monogram(label)}

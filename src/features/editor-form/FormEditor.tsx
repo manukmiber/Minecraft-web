@@ -96,7 +96,7 @@ export function FormEditor({ node }: { node: ContentNode }) {
             className="h-8 w-full rounded border border-transparent bg-transparent text-base font-semibold text-ink-50 transition-colors hover:border-ink-700 focus:border-accent-500 focus:bg-ink-850 focus:outline-none"
           />
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-[11px] text-ink-400">{project.namespace}:</span>
+            <span className="text-xs text-ink-300">{project.namespace}:</span>
             <input
               value={node.name}
               // Kept permissive on purpose: slugifying every keystroke would eat
@@ -109,7 +109,7 @@ export function FormEditor({ node }: { node: ContentNode }) {
               }
               aria-label="Identifier name"
               className={cn(
-                'h-6 w-56 rounded border bg-ink-900 px-1.5 font-mono text-[11px] text-ink-100 focus:outline-none',
+                'h-6 w-56 rounded border bg-ink-900 px-1.5 font-mono text-xs text-ink-100 focus:outline-none',
                 nameValid ? 'border-ink-700 focus:border-accent-500' : 'border-rose-500/60',
               )}
             />
@@ -119,14 +119,14 @@ export function FormEditor({ node }: { node: ContentNode }) {
       </header>
 
       {node.notes ? (
-        <p className="rounded-md border border-ink-700 bg-ink-850 px-2.5 py-2 text-[11px] leading-relaxed text-ink-300">
+        <p className="rounded-md border border-ink-700 bg-ink-850 px-2.5 py-2 text-xs leading-relaxed text-ink-300">
           {node.notes}
         </p>
       ) : null}
 
       {slots.length > 0 ? (
         <section className="rounded-lg border border-ink-700 bg-ink-850/60 p-3">
-          <h3 className="pb-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+          <h3 className="pb-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
             Textures
           </h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-2.5">
@@ -144,7 +144,7 @@ export function FormEditor({ node }: { node: ContentNode }) {
             <button
               type="button"
               onClick={() => setCollapsed((prev) => ({ ...prev, [group]: !prev[group] }))}
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300 transition-colors hover:text-ink-100"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300 transition-colors hover:text-ink-100"
             >
               <motion.span animate={{ rotate: isCollapsed ? -90 : 0 }} transition={{ duration: 0.15 }}>
                 <ChevronDown size={13} />
@@ -206,16 +206,18 @@ function Field({
             aria-checked={Boolean(value)}
             onClick={() => onChange(!value)}
             className={cn(
-              'relative h-5 w-9 rounded-full border transition-colors',
-              value ? 'border-accent-500 bg-accent-500/30' : 'border-ink-600 bg-ink-800',
+              'tap-target relative h-6 w-11 rounded-full border',
+              'transition-colors [transition-duration:var(--duration-state)]',
+              value ? 'border-accent-500 bg-accent-500/30' : 'border-edge bg-ink-800',
             )}
           >
             <motion.span
               layout
               transition={{ type: 'spring', stiffness: 620, damping: 34 }}
               className={cn(
-                'absolute top-0.5 size-3.5 rounded-full',
-                value ? 'left-[18px] bg-accent-500' : 'left-0.5 bg-ink-400',
+                'absolute top-[3px] size-4 rounded-full',
+                // Fill and position both move, so "on" is not a colour cue alone.
+                value ? 'left-[23px] bg-accent-500' : 'left-[3px] bg-ink-300',
               )}
             />
           </button>
@@ -233,11 +235,12 @@ function Field({
               step={field.step ?? 0.1}
               value={current}
               onChange={(event) => onChange(Number(event.target.value))}
-              className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-ink-600 accent-[var(--color-accent-500)]"
+              aria-valuetext={field.unit ? `${current} ${field.unit}` : String(current)}
+              className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-ink-600 accent-[var(--color-accent-500)]"
             />
-            <span className="w-14 shrink-0 text-right font-mono text-[11px] text-ink-100">
+            <span className="w-14 shrink-0 text-right font-mono text-xs text-ink-100">
               {current}
-              {field.unit ? <span className="text-ink-400"> {field.unit}</span> : null}
+              {field.unit ? <span className="text-ink-300"> {field.unit}</span> : null}
             </span>
           </div>
         )
@@ -256,7 +259,7 @@ function Field({
               onChange={(event) => onChange(Number(event.target.value))}
               className={cn(inputClass, 'w-36 font-mono')}
             />
-            {field.unit ? <span className="text-[11px] text-ink-400">{field.unit}</span> : null}
+            {field.unit ? <span className="text-xs text-ink-300">{field.unit}</span> : null}
           </div>
         )
 
@@ -295,7 +298,7 @@ function Field({
                     )
                   }
                   className={cn(
-                    'rounded border px-2 py-1 text-[11px] transition-colors',
+                    'rounded border px-2 py-1 text-xs transition-colors',
                     on
                       ? 'border-accent-500/60 bg-accent-500/15 text-accent-400'
                       : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',
@@ -408,16 +411,16 @@ function Field({
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="flex items-center gap-1 rounded border border-ink-600 bg-ink-800 py-0.5 pl-2 pr-1 font-mono text-[11px] text-ink-100"
+                    className="flex items-center gap-1 rounded border border-ink-600 bg-ink-800 py-0.5 pl-2 pr-1 font-mono text-xs text-ink-100"
                   >
                     {item}
                     <button
                       type="button"
                       onClick={() => onChange(items.filter((_, i) => i !== index))}
                       aria-label={`Remove ${item}`}
-                      className="rounded p-0.5 text-ink-400 transition-colors hover:text-rose-500"
+                      className="tap-target grid size-5 place-items-center rounded text-ink-300 transition-colors [transition-duration:var(--duration-state)] hover:text-rose-500"
                     >
-                      <X size={10} />
+                      <X size={12} aria-hidden="true" />
                     </button>
                   </motion.span>
                 ))}

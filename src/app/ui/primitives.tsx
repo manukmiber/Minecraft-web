@@ -6,7 +6,15 @@
  * per view.
  */
 
-import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from 'react'
+import {
+  type ButtonHTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+  cloneElement,
+  forwardRef,
+  isValidElement,
+  useId,
+} from 'react'
 import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -19,6 +27,7 @@ import {
   Shuffle,
   Sprout,
   Trees,
+  TriangleAlert,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -68,19 +77,32 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { variant = 'subtle', size = 'md', icon, className, children, ...rest },
   ref,
 ) {
+  // An icon-only button has no text to name it, so it must carry its own label.
+  const iconOnly = icon !== undefined && children === undefined
+  if (import.meta.env.DEV && iconOnly && !rest['aria-label'] && !rest['aria-labelledby']) {
+    console.warn('Button: icon-only buttons need an aria-label.')
+  }
+
   return (
     <button
       ref={ref}
+      type={rest.type ?? 'button'}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md border font-medium',
-        'transition-[background-color,border-color,color,transform,box-shadow] duration-150',
-        'active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45',
+        'tap-target inline-flex items-center justify-center gap-2 rounded-md border font-medium',
+        // Colour and elevation only: nothing here changes the element's box,
+        // so a press never nudges the toolbar around it.
+        'transition-[background-color,border-color,color,box-shadow,opacity]',
+        '[transition-duration:var(--duration-state)] [transition-timing-function:var(--ease-swift)]',
+        // Pressed feedback lands inside 90ms without moving neighbours.
+        'active:bg-ink-600/60 active:[transition-duration:var(--duration-tap)]',
+        'disabled:pointer-events-none disabled:opacity-45',
         'focus-visible:focus-ring',
-        size === 'sm' ? 'h-7 px-2.5 text-[11px]' : 'h-8 px-3 text-xs',
+        size === 'sm' ? 'h-8 px-3 text-xs' : 'h-9 px-3.5 text-sm',
+        iconOnly && (size === 'sm' ? 'w-8 px-0' : 'w-9 px-0'),
         variant === 'primary' &&
           'border-accent-500/60 bg-accent-500/18 text-accent-400 hover:bg-accent-500/28 hover:border-accent-500',
         variant === 'subtle' &&
-          'border-ink-600 bg-ink-750 text-ink-100 hover:bg-ink-700 hover:border-ink-500',
+          'border-edge bg-ink-750 text-ink-100 hover:bg-ink-700 hover:border-ink-300',
         variant === 'ghost' &&
           'border-transparent bg-transparent text-ink-200 hover:bg-ink-750 hover:text-ink-50',
         variant === 'danger' &&
@@ -89,7 +111,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       {...rest}
     >
-      {icon}
+      {/* The glyph repeats what the label already says, so screen readers skip it. */}
+      {icon ? (
+        <span aria-hidden="true" className="grid shrink-0 place-items-center">
+          {icon}
+        </span>
+      ) : null}
       {children}
     </button>
   )
@@ -107,7 +134,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase',
+        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium tracking-wide uppercase',
         tone === 'neutral' && 'border-ink-600 bg-ink-800 text-ink-200',
         tone === 'accent' && 'border-accent-500/40 bg-accent-500/10 text-accent-400',
         tone === 'warn' && 'border-amber-500/40 bg-amber-500/10 text-amber-500',
@@ -136,7 +163,7 @@ export function Section({
   return (
     <section className={cn('flex flex-col', className)}>
       <header className="sticky top-0 z-10 flex h-8 items-center justify-between gap-2 bg-ink-900/85 px-3 backdrop-blur">
-        <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
           {title}
         </h3>
         {action}
@@ -164,15 +191,31 @@ export function EmptyState({
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-ink-600 px-4 py-8 text-center"
     >
-      {icon ? <div className="text-ink-400">{icon}</div> : null}
-      <p className="text-xs font-medium text-ink-100">{title}</p>
-      {detail ? <p className="max-w-xs text-[11px] leading-relaxed text-ink-300">{detail}</p> : null}
+      {icon ? (
+        <div aria-hidden="true" className="text-ink-300">
+          {icon}
+        </div>
+      ) : null}
+      {/* One clear step up from the body copy, so the eye lands on the title. */}
+      <p className="text-base font-semibold text-ink-50">{title}</p>
+      {detail ? (
+        // Held to a readable measure rather than running edge to edge.
+        <p className="max-w-[42ch] text-xs leading-relaxed text-ink-200">{detail}</p>
+      ) : null}
       {action}
     </motion.div>
   )
 }
 
-/** Label + control + help text, the shape every wizard field uses. */
+/**
+ * Label + control + help text, the shape every wizard field uses.
+ *
+ * The label is always visible — a placeholder disappears the moment someone
+ * types, which leaves them with no way back to what the field was for. Help and
+ * error text sit directly under the control and are wired to it with
+ * `aria-describedby`, so a screen reader reads the reason without hunting for a
+ * summary at the top of the form.
+ */
 export function FieldRow({
   label,
   help,
@@ -186,37 +229,77 @@ export function FieldRow({
   children: ReactNode
   htmlFor?: string
 }) {
+  const generated = useId()
+  const base = htmlFor ?? generated
+  const helpId = `${base}-help`
+  const errorId = `${base}-error`
+  const describedBy = error ? errorId : help ? helpId : undefined
+
+  // Wire the description onto the control itself when it is a single element,
+  // which covers every input, select and textarea in the app.
+  const control =
+    describedBy && isValidElement(children)
+      ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+          'aria-describedby': [
+            (children.props as Record<string, unknown>)['aria-describedby'],
+            describedBy,
+          ]
+            .filter(Boolean)
+            .join(' '),
+          'aria-invalid': error ? true : (children.props as Record<string, unknown>)['aria-invalid'],
+        })
+      : children
+
   return (
     <div className="flex flex-col gap-1.5 py-2">
-      <label
-        htmlFor={htmlFor}
-        className="text-[11px] font-medium tracking-wide text-ink-100"
-      >
+      <label htmlFor={htmlFor} className="text-xs font-medium tracking-wide text-ink-100">
         {label}
       </label>
-      {children}
+      {control}
       {error ? (
-        <p className="text-[11px] leading-relaxed text-rose-500">{error}</p>
+        // Announced on arrival, and marked by an icon as well as colour.
+        <p
+          id={errorId}
+          role="alert"
+          className="flex items-start gap-1.5 text-xs leading-relaxed text-rose-500"
+        >
+          <TriangleAlert size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </p>
       ) : help ? (
-        <p className="text-[11px] leading-relaxed text-ink-300">{help}</p>
+        <p id={helpId} className="text-xs leading-relaxed text-ink-300">
+          {help}
+        </p>
       ) : null}
     </div>
   )
 }
 
 export const inputClass = cn(
-  'h-8 w-full rounded-md border border-ink-600 bg-ink-850 px-2.5 text-xs text-ink-50',
-  'placeholder:text-ink-400 transition-colors duration-150',
-  'hover:border-ink-500 focus:border-accent-500 focus:outline-none focus:shadow-[0_0_0_3px_var(--color-accent-glow)]',
+  'h-9 w-full rounded-md border border-edge bg-ink-850 px-2.5 text-sm text-ink-50',
+  'placeholder:text-ink-300 transition-colors [transition-duration:var(--duration-state)]',
+  'hover:border-ink-300 focus:border-accent-500 focus:outline-none focus:shadow-[0_0_0_3px_var(--color-accent-glow)]',
+  // An invalid field is outlined as well as described, so the state does not
+  // rest on colour alone.
+  'aria-[invalid=true]:border-rose-500 aria-[invalid=true]:focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-rose-500)_28%,transparent)]',
+  'disabled:cursor-not-allowed disabled:opacity-50',
 )
 
-export function Spinner({ className }: { className?: string }) {
+/**
+ * Busy indicator. Pass `label` when the spinner is the only sign that work is
+ * happening; leave it off when adjacent text already says so.
+ */
+export function Spinner({ className, label }: { className?: string; label?: string }) {
   return (
     <span
+      role={label ? 'status' : undefined}
+      aria-hidden={label ? undefined : 'true'}
       className={cn(
-        'inline-block size-3 animate-spin rounded-full border-2 border-ink-500 border-t-accent-500',
+        'inline-block size-3.5 animate-spin rounded-full border-2 border-ink-500 border-t-accent-500',
         className,
       )}
-    />
+    >
+      {label ? <span className="sr-only">{label}</span> : null}
+    </span>
   )
 }

@@ -21,7 +21,7 @@ export function PresetLibrary() {
     <div className="h-full overflow-y-auto p-2">
       {BUILTIN_PRESET_PACKS.map((pack) => (
         <section key={pack.id} className="mb-4">
-          <h3 className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+          <h3 className="px-1 pb-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
             {pack.label}
           </h3>
 
@@ -45,7 +45,7 @@ export function PresetLibrary() {
                     <Layers size={13} className="mt-0.5 shrink-0 text-accent-500" />
                     <div className="min-w-0 flex-1">
                       <h4 className="truncate text-xs font-medium text-ink-50">{preset.label}</h4>
-                      <p className="mt-0.5 text-[11px] leading-relaxed text-ink-300">
+                      <p className="mt-0.5 text-xs leading-relaxed text-ink-300">
                         {preset.description}
                       </p>
                     </div>
@@ -59,7 +59,7 @@ export function PresetLibrary() {
                   {preset.notes && preset.notes.length > 0 ? (
                     <ul className="mt-2 flex flex-col gap-1 border-l border-ink-700 pl-2">
                       {preset.notes.map((note) => (
-                        <li key={note} className="text-[10.5px] leading-relaxed text-ink-400">
+                        <li key={note} className="text-[10.5px] leading-relaxed text-ink-300">
                           {note}
                         </li>
                       ))}
@@ -87,7 +87,7 @@ export function PresetLibrary() {
                     >
                       {applied ? 'Re-apply' : 'Apply'}
                     </Button>
-                    <span className="text-[10px] text-ink-400">
+                    <span className="text-xs text-ink-300">
                       {preset.nodes.length} pieces of content
                     </span>
                   </footer>

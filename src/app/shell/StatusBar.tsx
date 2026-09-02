@@ -21,40 +21,58 @@ export function StatusBar() {
   const target = getTargetProfile(project.targetProfileId)
 
   return (
-    <footer className="flex h-6 shrink-0 items-center gap-4 border-t border-ink-800 bg-ink-900 px-3 text-[11px] text-ink-300">
+    <footer
+      aria-label="Workspace status"
+      className="flex h-8 shrink-0 items-center gap-4 overflow-hidden whitespace-nowrap border-t border-ink-800 bg-ink-900 px-3 text-xs text-ink-300"
+    >
       <button
         type="button"
         onClick={() => togglePanel()}
+        aria-expanded={panelOpen}
+        aria-controls="problems-panel"
+        aria-label={
+          errors === 0 && warnings === 0
+            ? 'Problems: none. The pack generates cleanly.'
+            : `Problems: ${errors} ${errors === 1 ? 'error' : 'errors'}, ${warnings} ${
+                warnings === 1 ? 'warning' : 'warnings'
+              }`
+        }
         className={cn(
-          'flex items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-ink-800',
+          'tap-target flex shrink-0 items-center gap-1.5 rounded px-1.5 py-1',
+          'transition-colors [transition-duration:var(--duration-state)]',
+          'hover:bg-ink-800 active:bg-ink-750',
           panelOpen && 'bg-ink-800 text-ink-100',
         )}
-        title="Problems"
       >
         {errors > 0 ? (
           <>
-            <AlertTriangle size={12} className="text-rose-500" />
-            <span className="text-rose-500">{errors}</span>
+            <AlertTriangle size={13} aria-hidden="true" className="text-rose-500" />
+            {/* The count is spelled out beside the glyph rather than left to colour. */}
+            <span className="text-rose-500">
+              {errors} {errors === 1 ? 'error' : 'errors'}
+            </span>
           </>
         ) : (
-          <CircleCheck size={12} className="text-mint-500" />
+          <CircleCheck size={13} aria-hidden="true" className="text-mint-500" />
         )}
         {warnings > 0 ? (
           <>
-            <TriangleAlert size={12} className="ml-1.5 text-amber-500" />
-            <span className="text-amber-500">{warnings}</span>
+            <TriangleAlert size={13} aria-hidden="true" className="ml-1.5 text-amber-500" />
+            <span className="text-amber-500">
+              {warnings} {warnings === 1 ? 'warning' : 'warnings'}
+            </span>
           </>
         ) : null}
         {errors === 0 && warnings === 0 ? <span className="text-mint-500">Pack is valid</span> : null}
       </button>
 
-      <span className="flex items-center gap-1.5">
-        <Layers size={12} />
+      <span className="flex items-center gap-1.5 max-sm:hidden">
+        <Layers size={13} aria-hidden="true" />
         {project.nodes.length} content
       </span>
 
-      <span className="flex items-center gap-1.5">
-        <FileCode2 size={12} />
+      <span className="flex items-center gap-1.5 max-sm:hidden">
+        <FileCode2 size={13} aria-hidden="true" />
         {files.size} files
       </span>
 
@@ -64,14 +82,17 @@ export function StatusBar() {
         key={target.id}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex items-center gap-1.5"
+        className="flex items-center gap-1.5 max-md:hidden"
         title={target.notes.join('\n')}
+        aria-label={`Target: ${target.label}`}
       >
-        <Cpu size={12} />
+        <Cpu size={13} aria-hidden="true" />
         {target.label}
       </motion.span>
 
-      <span className="font-mono text-ink-400">v{project.version.join('.')}</span>
+      <span className="font-mono text-ink-300" aria-label={`Pack version ${project.version.join('.')}`}>
+        v{project.version.join('.')}
+      </span>
     </footer>
   )
 }

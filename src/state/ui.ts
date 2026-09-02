@@ -7,6 +7,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+/**
+ * Resize bounds, exported so the splitters can report the same range through
+ * `aria-valuemin` / `aria-valuemax` that the store actually enforces.
+ */
+export const SIDEBAR_MIN_WIDTH = 200
+export const SIDEBAR_MAX_WIDTH = 520
+export const PANEL_MIN_HEIGHT = 120
+export const PANEL_MAX_HEIGHT = 520
+
 export type SideView =
   | 'content'
   | 'files'
@@ -52,10 +61,12 @@ export const useUi = create<UiState>()(
         else set({ sideView: view, sidebarOpen: true })
       },
       toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
-      setSidebarWidth: (width) => set({ sidebarWidth: Math.min(520, Math.max(200, width)) }),
+      setSidebarWidth: (width) =>
+        set({ sidebarWidth: Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width)) }),
       setInspectorWidth: (width) => set({ inspectorWidth: Math.min(560, Math.max(260, width)) }),
       togglePanel: (open) => set({ panelOpen: open ?? !get().panelOpen }),
-      setPanelHeight: (height) => set({ panelHeight: Math.min(520, Math.max(120, height)) }),
+      setPanelHeight: (height) =>
+        set({ panelHeight: Math.min(PANEL_MAX_HEIGHT, Math.max(PANEL_MIN_HEIGHT, height)) }),
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
     }),
     {

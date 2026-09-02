@@ -9,10 +9,19 @@ import { Command } from 'cmdk'
 import { FileJson, Plus, Search } from 'lucide-react'
 
 import { cn, kindIcon, ACCENT_CLASS } from '../ui/primitives'
+import { useModalA11y } from '../ui/useModalA11y'
 import { allKinds, getKind } from '../../core/registry/types'
 import { useProject } from '../../state/project'
 import { useUi, type SideView } from '../../state/ui'
 import { BUILTIN_PRESET_PACKS } from '../../presets/farming'
+
+/** Shared cmdk group-heading styling, kept in one place rather than per group. */
+const GROUP_CLASS = [
+  '[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5',
+  '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold',
+  '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider',
+  '[&_[cmdk-group-heading]]:text-ink-300',
+].join(' ')
 
 const PANELS: Array<{ view: SideView; label: string }> = [
   { view: 'content', label: 'Content' },
@@ -28,13 +37,15 @@ export function CommandPalette() {
   const { paletteOpen, setPaletteOpen, setSideView } = useUi()
   const { project, files, addNode, openNode, openFile, applyPresetFile, toast } = useProject()
 
+  // Escape, a contained Tab cycle, and focus handed back to whatever opened it.
+  const dialogRef = useModalA11y<HTMLDivElement>(paletteOpen, () => setPaletteOpen(false))
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         setPaletteOpen(!useUi.getState().paletteOpen)
       }
-      if (event.key === 'Escape') setPaletteOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -47,7 +58,10 @@ export function CommandPalette() {
     <AnimatePresence>
       {paletteOpen ? (
         <motion.div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-ink-950/60 p-6 pt-[12vh] backdrop-blur-sm"
+          // A 60% scrim over #06080c was not enough to isolate the panel from a
+          // bright 3D preview behind it; measured against the real backdrop, 78%
+          // keeps the dialog clearly in front.
+          className="fixed inset-0 z-50 flex items-start justify-center bg-ink-950/[0.78] p-4 pt-[10vh] backdrop-blur-sm sm:p-6 sm:pt-[12vh]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -57,6 +71,10 @@ export function CommandPalette() {
           }}
         >
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
             initial={{ opacity: 0, y: -12, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
@@ -65,22 +83,23 @@ export function CommandPalette() {
           >
             <Command loop className="flex flex-col">
               <div className="flex items-center gap-2 border-b border-ink-700 px-3">
-                <Search size={15} className="text-ink-400" />
+                <Search size={16} aria-hidden="true" className="text-ink-300" />
                 <Command.Input
                   autoFocus
+                  aria-label="Search commands, content and files"
                   placeholder="Create content, open a file, jump to a panel…"
-                  className="h-11 flex-1 bg-transparent text-sm text-ink-50 placeholder:text-ink-400 focus:outline-none"
+                  className="h-12 flex-1 bg-transparent text-sm text-ink-50 placeholder:text-ink-300 focus:outline-none"
                 />
               </div>
 
               <Command.List className="max-h-[52vh] overflow-y-auto p-2">
-                <Command.Empty className="px-3 py-6 text-center text-xs text-ink-300">
+                <Command.Empty className="px-3 py-6 text-center text-sm text-ink-300">
                   Nothing matches that.
                 </Command.Empty>
 
                 <Command.Group
                   heading="Create"
-                  className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-ink-400"
+                  className={GROUP_CLASS}
                 >
                   {allKinds().map((kind) => {
                     const Icon = kindIcon(kind.icon)
@@ -93,10 +112,11 @@ export function CommandPalette() {
                           close()
                         }}
                       >
-                        <Plus size={13} className="text-ink-400" />
-                        <Icon size={13} className={ACCENT_CLASS[kind.accent]} />
-                        <span>New {kind.label}</span>
-                        <span className="ml-auto truncate text-[11px] text-ink-400">
+                        <Plus size={14} aria-hidden="true" className="text-ink-300" />
+                        <Icon size={14} aria-hidden="true" className={ACCENT_CLASS[kind.accent]} />
+                        {/* The name never wraps; the description gives way instead. */}
+                        <span className="shrink-0">New {kind.label}</span>
+                        <span className="ml-auto min-w-0 truncate pl-3 text-xs text-ink-300">
                           {kind.description}
                         </span>
                       </Item>
@@ -107,7 +127,7 @@ export function CommandPalette() {
                 {project.nodes.length > 0 ? (
                   <Command.Group
                     heading="Content"
-                    className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-ink-400"
+                    className={GROUP_CLASS}
                   >
                     {project.nodes.map((node) => {
                       const kind = getKind(node.kind)
@@ -122,11 +142,12 @@ export function CommandPalette() {
                           }}
                         >
                           <Icon
-                            size={13}
-                            className={kind ? ACCENT_CLASS[kind.accent] : 'text-ink-400'}
+                            size={14}
+                            aria-hidden="true"
+                            className={kind ? ACCENT_CLASS[kind.accent] : 'text-ink-300'}
                           />
-                          <span>{node.displayName}</span>
-                          <span className="ml-auto font-mono text-[11px] text-ink-400">
+                          <span className="truncate">{node.displayName}</span>
+                          <span className="ml-auto min-w-0 shrink-0 pl-3 font-mono text-xs text-ink-300">
                             {project.namespace}:{node.name}
                           </span>
                         </Item>
@@ -137,7 +158,7 @@ export function CommandPalette() {
 
                 <Command.Group
                   heading="Presets"
-                  className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-ink-400"
+                  className={GROUP_CLASS}
                 >
                   {BUILTIN_PRESET_PACKS.flatMap((pack) =>
                     pack.presets.map((preset) => (
@@ -154,8 +175,8 @@ export function CommandPalette() {
                           close()
                         }}
                       >
-                        <Plus size={13} className="text-ink-400" />
-                        <span>Apply preset · {preset.label}</span>
+                        <Plus size={14} aria-hidden="true" className="text-ink-300" />
+                        <span className="truncate">Apply preset · {preset.label}</span>
                       </Item>
                     )),
                   )}
@@ -163,7 +184,7 @@ export function CommandPalette() {
 
                 <Command.Group
                   heading="Files"
-                  className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-ink-400"
+                  className={GROUP_CLASS}
                 >
                   {filePaths.map((path) => (
                     <Item
@@ -174,15 +195,15 @@ export function CommandPalette() {
                         close()
                       }}
                     >
-                      <FileJson size={13} className="text-ink-400" />
-                      <span className="font-mono text-[11px]">{path}</span>
+                      <FileJson size={14} aria-hidden="true" className="text-ink-300" />
+                      <span className="truncate font-mono text-xs">{path}</span>
                     </Item>
                   ))}
                 </Command.Group>
 
                 <Command.Group
                   heading="Go to"
-                  className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-ink-400"
+                  className={GROUP_CLASS}
                 >
                   {PANELS.map((panel) => (
                     <Item
@@ -220,8 +241,12 @@ function Item({
       value={value}
       onSelect={onSelect}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-ink-200',
+        'relative flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 pl-3 text-sm text-ink-200',
+        // The tint alone is a colour-only cue, so the selected row also gets a
+        // solid accent bar down its leading edge.
         'data-[selected=true]:bg-accent-500/15 data-[selected=true]:text-ink-50',
+        'before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full',
+        'before:bg-transparent data-[selected=true]:before:bg-accent-500',
       )}
     >
       {children}
