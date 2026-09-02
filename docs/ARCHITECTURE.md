@@ -2,14 +2,16 @@
 
 ## The one rule
 
-`ProjectModel` is the only source of truth. A pure function rebuilds the entire
-`behavior_pack/` + `resource_pack/` tree from it on every change:
+`ProjectModel` is the only source of truth. Pure functions rebuild the entire
+output tree from it on every change:
 
 ```
-ProjectModel ──emitProject()──▶ VirtualFs (path → file) ──┬─▶ file explorer
-                                                          ├─▶ code editor
-                                                          ├─▶ problems panel
-                                                          └─▶ .mcaddon export
+                ┌─emitProject()─▶ VirtualFs ──┬─▶ file explorer
+                │  (Bedrock)                  ├─▶ code editor
+ProjectModel ───┤                             ├─▶ problems panel
+                │                             └─▶ .mcaddon
+                └─emitJava()────▶ VirtualFs ──┬─▶ data pack + resource pack
+                   (Java)                     └─▶ Gradle mod project
 ```
 
 Because the tree is regenerated from scratch, a rename or a re-uploaded texture
@@ -17,21 +19,30 @@ can never leave a stale reference behind, and the behaviour pack and resource
 pack cannot disagree about an identifier. That is the whole reason you never
 type a texture path or match a name across two files.
 
+The two emitters are separate rather than one parameterised pass, and that is
+the load-bearing decision on the Java side. They do not produce the same shape
+of thing: Bedrock's tree is two packs of JSON that the game reads directly,
+while Java's is either a data pack (which cannot register content at all) or a
+source project that has to be compiled. Forcing both through one emitter would
+mean every generator carrying a branch for a platform it has no business
+knowing about.
+
 ## Layers
 
 ```
 src/core/          pure TypeScript, no React — testable on its own
   model/           ProjectModel, node/asset shapes, migrations
-  targets/         every format_version and min_engine_version, in one place
+  targets/         platforms, loaders, every version number, the capability matrix
   registry/        ContentKind: fields, texture slots, emitter, preview
   kinds/           the built-in kinds (block, crop, item, entity, recipe, biome)
-  generators/      the emit pass, geometry and animation builders
+  generators/      the Bedrock emit pass, geometry and animation builders
+    java/          the Java emitters: data pack, resource pack, mod sources
   presets/         preset format, validation, apply
-  recipes/         crafting stations: slot layouts and the tags they emit
+  recipes/         crafting stations: slot layouts, tags, and the Bedrock limits
   data/            the vanilla identifier catalogue the item browser offers
   schema/          JSON-schema bindings for the code editor
   vfs/             virtual file tree
-  export/          .mcaddon packaging (JSZip)
+  export/          artifact bundling (JSZip) and release channels
 
 src/integrations/  the outside world
   github/          Git Data API client + the project-repo layout
@@ -183,3 +194,77 @@ The Worker is intentionally thin — it proxies R2 and answers a health check.
 
 `src/core/targets/profiles.ts` holds all of it. A new stable Bedrock release
 should be a new profile, not a code change.
+
+
+## Two platforms, three delivery routes
+
+`src/core/targets/` holds the vocabulary. It is worth learning because the words
+are used precisely everywhere else:
+
+- **platform** — the game edition: `bedrock` or `java`.
+- **loader** — how a Java build is delivered: `datapack` (no loader at all),
+  `fabric`, `quilt`, `forge`, `neoforge`.
+- **profile** — the version slice inside a platform, holding every schema number
+  that version needs.
+
+`capabilities.ts` declares, per feature, how well each of the three delivery
+routes covers it, with a written reason on every cell that is not full support.
+That file is data, not documentation: the export dialog and the Compatibility
+panel both read it, so correcting the data corrects what the app tells people.
+
+### Why the Java side needs a version descriptor and Bedrock does not
+
+Bedrock's profile is a bag of `format_version` strings. Java's has to carry
+three separate axes because all three changed between the supported versions,
+and each fails differently:
+
+| Axis | What changed | How it fails |
+|---|---|---|
+| `registryFolders` | 1.21 made every data-pack registry folder singular — `recipes/` → `recipe/` | Silently ignored |
+| `recipeSyntax` | 1.21 dropped the ingredient wrapper object and renamed the result key | Recipe rejected at load |
+| `api` | `ResourceLocation`'s constructor went private, `saturationMod` → `saturationModifier`, `Block#use` → `useWithoutItem` | Compile error |
+
+Every one of those lives in `javaProfiles.ts` as a code fragment rather than a
+boolean, so the generators read a value instead of branching on a version.
+
+### Why Forge and NeoForge are not one family
+
+The usual multi-loader split is "Fabric versus the Forge family", and it is
+almost right. Forge stayed on `net.minecraftforge.*` and hands you a
+`RegistryObject`; NeoForge moved to `net.neoforged.*` with a `DeferredHolder`.
+And NeoForge 20.1 predates its own rename, so on 1.20.1 it is indistinguishable
+from Forge at the source level.
+
+`generators/java/loaderCode.ts` makes the dialect a function of *both* the
+loader and the Minecraft version. Everything downstream reads its fragments
+rather than testing which loader it is generating for.
+
+### Custom stations bake their recipes
+
+A recipe made at one of the project's own stations is not a data-pack file on
+Java — it is a row in a generated static matcher (`StationRecipes.java`).
+
+The reason is version drift again: Java's recipe API was rewritten between
+1.20.1 and 1.21 (`Recipe<Container>` became `Recipe<RecipeInput>`, serializers
+moved to codecs), so a generated custom recipe *type* would need two
+incompatible implementations. Matching item identifiers in a static table needs
+neither, and a station's recipe set is fixed at export time anyway.
+
+`emitRecipes` returns the split — data-pack recipes and station recipes — so the
+two routes cannot both claim the same recipe or both drop it.
+
+## Export and release
+
+`export/bundle.ts` builds every selected artifact independently, each carrying
+its own problem list. One loader failing does not cost you the other four, and
+the summary says which of the six came out.
+
+`export/release.ts` owns the channel logic. The one thing worth knowing: build
+numbers are derived from the tags already in the repository, never stored. A
+counter in local storage is wrong the moment someone exports from a second
+machine, and the tags are the only record every client shares.
+
+`integrations/github/projectRepo.ts` commits the artifacts *before* cutting the
+release, and tags the resulting commit rather than the branch head — so the
+release page and the repository agree about what shipped, and a push that lands
+in between does not end up inside the release.

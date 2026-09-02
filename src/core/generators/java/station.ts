@@ -208,7 +208,6 @@ public class StationBlock extends Block {
 
         SimpleMenuProvider provider = new SimpleMenuProvider(
                 (containerId, inventory, ignored) -> new StationMenu(
-                        definition.menuType().get(),
                         containerId,
                         inventory,
                         ContainerLevelAccess.create(level, pos),
@@ -255,12 +254,14 @@ public class StationMenu extends AbstractContainerMenu {
     private final SimpleContainer result = new SimpleContainer(1);
 
     public StationMenu(
-            net.minecraft.world.inventory.MenuType<StationMenu> type,
             int containerId,
             Inventory inventory,
             ContainerLevelAccess access,
             ModStations.Definition definition) {
-        super(type, containerId);
+        // The menu reads its own type off the definition rather than being
+        // handed one, so there is a single place a station's type is bound and
+        // no way for the two to disagree.
+        super(definition.menuType().get(), containerId);
         this.access = access;
         this.player = inventory.player;
         this.definition = definition;
@@ -595,36 +596,34 @@ function emitModStations(
     .map(({ node, station }) => {
       const layout = station.layout.kind === 'grid' ? station.layout : { rows: 3, cols: 3 }
       const constant = node.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')
-      return fabric
-        ? `    public static final Definition ${constant} = define(
-            ${lit(node.name)}, ${layout.rows}, ${layout.cols}, ${lit(`block.${ctx.modId}.${node.name}`)});`
-        : `    public static final Definition ${constant} = define(
+      return `    public static final Definition ${constant} = define(
             ${lit(node.name)}, ${layout.rows}, ${layout.cols}, ${lit(`block.${ctx.modId}.${node.name}`)});`
     })
     .join('\n\n')
 
-  const registerBody = fabric
-    ? `        for (Definition definition : DEFINITIONS.values()) {
-            MenuType<StationMenu> type = new MenuType<>(
-                    (containerId, inventory) -> new StationMenu(
-                            definition.menuType().get(),
-                            containerId,
-                            inventory,
-                            ContainerLevelAccess.NULL,
-                            definition),
-                    FeatureFlags.VANILLA_SET);
-            definition.bind(Registry.register(BuiltInRegistries.MENU, ModRegistry.id(definition.key()), type));
-        }`
-    : `        for (Definition definition : DEFINITIONS.values()) {
-            MENUS.register(definition.key(), () -> new MenuType<>(
-                    (containerId, inventory) -> new StationMenu(
-                            definition.menuType().get(),
-                            containerId,
-                            inventory,
-                            ContainerLevelAccess.NULL,
-                            definition),
-                    FeatureFlags.VANILLA_SET));
-        }`
+  // The menu type is created as each Definition is built rather than in a
+  // separate register() pass. That was a real bug on the Forge family: a
+  // DeferredRegister entry created inside a method nobody calls never fires,
+  // so every station opened with a null type.
+  const createType = fabric
+    ? `    private static Supplier<MenuType<StationMenu>> createType(String key, Definition definition) {
+        MenuType<StationMenu> type = new MenuType<>(
+                (containerId, inventory) -> new StationMenu(
+                        containerId, inventory, ContainerLevelAccess.NULL, definition),
+                FeatureFlags.VANILLA_SET);
+        Registry.register(BuiltInRegistries.MENU, ModRegistry.id(key), type);
+        return () -> type;
+    }`
+    : `    @SuppressWarnings("unchecked")
+    private static Supplier<MenuType<StationMenu>> createType(String key, Definition definition) {
+        // DeferredRegister is typed on the wildcard, so the cast is unavoidable
+        // — the factory above only ever builds a StationMenu, so it is sound.
+        var holder = MENUS.register(key, () -> new MenuType<>(
+                (containerId, inventory) -> new StationMenu(
+                        containerId, inventory, ContainerLevelAccess.NULL, definition),
+                FeatureFlags.VANILLA_SET));
+        return () -> (MenuType<StationMenu>) holder.get();
+    }`
 
   const header = fabric
     ? `package ${pkg};
@@ -645,7 +644,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
-${code.registryImports.map((name) => `import ${name};`).join('\n')}
+${code.registryImports
+  // Only the register itself is used here — the holder type is inferred with
+  // `var`, so importing it would be an unused import in every export.
+  .filter((name) => name.endsWith('DeferredRegister'))
+  .map((name) => `import ${name};`)
+  .join('\n')}
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -673,7 +677,7 @@ ${fabric ? '' : `    public static final DeferredRegister<MenuType<?>> MENUS =
         private final int rows;
         private final int cols;
         private final String titleKey;
-        private MenuType<StationMenu> type;
+        private Supplier<MenuType<StationMenu>> type = () -> null;
 
         Definition(String key, int rows, int cols, String titleKey) {
             this.key = key;
@@ -687,11 +691,9 @@ ${fabric ? '' : `    public static final DeferredRegister<MenuType<?>> MENUS =
         public int cols() { return this.cols; }
         public String titleKey() { return this.titleKey; }
 
-        void bind(MenuType<StationMenu> bound) { this.type = bound; }
+        void bind(Supplier<MenuType<StationMenu>> bound) { this.type = bound; }
 
-        public Supplier<MenuType<StationMenu>> menuType() {
-            return () -> this.type;
-        }
+        public Supplier<MenuType<StationMenu>> menuType() { return this.type; }
     }
 
     private static final Map<String, Definition> DEFINITIONS = new LinkedHashMap<>();
@@ -703,8 +705,11 @@ ${definitions || '    // This add-on defines no custom stations.'}
     private static Definition define(String key, int rows, int cols, String titleKey) {
         Definition definition = new Definition(key, rows, cols, titleKey);
         DEFINITIONS.put(key, definition);
+        definition.bind(createType(key, definition));
         return definition;
     }
+
+${createType}
 
     public static Definition get(String key) {
         return DEFINITIONS.get(key);
@@ -714,8 +719,8 @@ ${definitions || '    // This add-on defines no custom stations.'}
         return DEFINITIONS.values();
     }
 
+    /** Touching this class runs the static initialisers that do the work. */
     public static void register() {
-${registerBody}
     }
 }
 `

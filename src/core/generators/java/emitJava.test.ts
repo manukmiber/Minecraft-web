@@ -221,6 +221,35 @@ describe('java mod route', () => {
     )
   })
 
+  it('binds each station’s menu type as the definition is created', () => {
+    const { project } = farmProject()
+
+    for (const loader of ['fabric', 'forge', 'neoforge'] as const) {
+      const fs = emitJava(project, { loader, profileId: 'java-1.21.1' }).artifacts.get(loader)!
+      const stations = source(fs, 'src/main/java/com/farm/ModStations.java')
+
+      // The binding has to happen while the Definition is built. Doing it in a
+      // separate register() pass silently failed on the Forge family, where a
+      // DeferredRegister entry created inside an uncalled method never fires and
+      // every station opened with a null menu type.
+      expect(stations).toContain('definition.bind(createType(key, definition))')
+      expect(stations).toContain('private static Supplier<MenuType<StationMenu>> createType(')
+    }
+
+    // Fabric registers straight into the vanilla registry; the Forge family has
+    // to go through its DeferredRegister.
+    const fabric = emitJava(project, { loader: 'fabric', profileId: 'java-1.21.1' })
+      .artifacts.get('fabric')!
+    expect(source(fabric, 'src/main/java/com/farm/ModStations.java')).toContain(
+      'Registry.register(BuiltInRegistries.MENU',
+    )
+    const neoforge = emitJava(project, { loader: 'neoforge', profileId: 'java-1.21.1' })
+      .artifacts.get('neoforge')!
+    expect(source(neoforge, 'src/main/java/com/farm/ModStations.java')).toContain(
+      'MENUS.register(key,',
+    )
+  })
+
   it('bakes a station recipe at the station’s own grid size', () => {
     const { project } = farmProject()
     const ctx = createJavaContext(project, getJavaProfile('java-1.21.1'), 'fabric')

@@ -304,8 +304,6 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemNameBlockItem;
 ${code.registryImports.map((name) => `import ${name};`).join('\n')}
-
-import java.util.function.Supplier;
 `
 
   const body = `${header}
@@ -411,8 +409,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 ${code.registryImports.map((name) => `import ${name};`).join('\n')}
-
-import java.util.function.Supplier;
 `
 
   const blockItems = itemised
