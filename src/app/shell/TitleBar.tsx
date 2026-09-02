@@ -15,6 +15,13 @@ import { useSettings, repoConfigured } from '../../state/settings'
 import { ChangelogDialog, type ChangelogIntent } from '../../features/save-export/ChangelogDialog'
 import { exportAddon, saveToSlot } from '../../features/save-export/actions'
 
+/**
+ * Mac uses Command, everything else uses Control. Showing "Ctrl" beside a ⌘
+ * glyph on a Mac is a small lie about which key to press.
+ */
+const IS_APPLE =
+  typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)
+
 export function TitleBar() {
   const { project, dirty, busy, activeSlot, past, futureStack, undo, redo, commit } = useProject()
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
@@ -28,9 +35,12 @@ export function TitleBar() {
 
   return (
     <>
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-ink-800 bg-ink-900 px-3">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-ink-800 bg-ink-900 px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <div className="grid size-6 place-items-center rounded bg-accent-500/15 text-[10px] font-bold tracking-tight text-accent-400">
+          <div
+            aria-hidden="true"
+            className="grid size-7 place-items-center rounded bg-accent-500/15 text-sm font-bold tracking-tight text-accent-400"
+          >
             m
           </div>
           <input
@@ -38,8 +48,9 @@ export function TitleBar() {
             onChange={(event) => commit({ ...project, name: event.target.value })}
             aria-label="Project name"
             className={cn(
-              'h-7 w-52 rounded border border-transparent bg-transparent px-1.5 text-[13px] font-semibold text-ink-50',
-              'transition-colors hover:border-ink-700 focus:border-accent-500 focus:bg-ink-850 focus:outline-none',
+              'h-9 w-52 min-w-0 max-w-[45vw] rounded border border-transparent bg-transparent px-2 text-sm font-semibold text-ink-50',
+              'transition-colors [transition-duration:var(--duration-state)]',
+              'hover:border-ink-700 focus:border-accent-500 focus:bg-ink-850 focus:outline-none',
             )}
           />
         </div>
@@ -48,17 +59,21 @@ export function TitleBar() {
           {project.namespace}
         </Badge>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-ink-300">
-          <GitBranch size={12} />
+        <div className="flex items-center gap-1.5 text-xs text-ink-300">
+          <GitBranch size={13} aria-hidden="true" />
           <span className="font-mono">{activeSlot}</span>
           {dirty ? (
             <motion.span
               layout
               initial={{ opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="size-1.5 rounded-full bg-amber-500"
-              title="Unsaved changes"
-            />
+              // The dot alone is a colour-only signal, so the word rides
+              // along with it for anyone who cannot separate the two.
+              className="flex items-center gap-1 font-medium text-amber-500"
+            >
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
+              Unsaved
+            </motion.span>
           ) : null}
         </div>
 
@@ -66,9 +81,11 @@ export function TitleBar() {
 
         {busy ? (
           <motion.div
+            role="status"
+            aria-live="polite"
             initial={{ opacity: 0, x: 8 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2 text-[11px] text-ink-200"
+            className="flex items-center gap-2 text-xs text-ink-200"
           >
             <Spinner />
             {busy}
@@ -81,41 +98,48 @@ export function TitleBar() {
             size="sm"
             onClick={undo}
             disabled={past.length === 0}
-            title="Undo (Ctrl+Z)"
+            icon={<Undo2 size={15} />}
+            title={`Undo (${IS_APPLE ? '\u2318' : 'Ctrl+'}Z)`}
             aria-label="Undo"
-          >
-            <Undo2 size={14} />
-          </Button>
+            aria-keyshortcuts={IS_APPLE ? 'Meta+Z' : 'Control+Z'}
+          />
           <Button
             variant="ghost"
             size="sm"
             onClick={redo}
             disabled={futureStack.length === 0}
-            title="Redo (Ctrl+Shift+Z)"
+            icon={<Redo2 size={15} />}
+            title={`Redo (${IS_APPLE ? '\u2318' : 'Ctrl+'}Shift+Z)`}
             aria-label="Redo"
-          >
-            <Redo2 size={14} />
-          </Button>
+            aria-keyshortcuts={IS_APPLE ? 'Meta+Shift+Z' : 'Control+Shift+Z'}
+          />
         </div>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setPaletteOpen(true)}
-          icon={<Command size={13} />}
-          title="Command palette (Ctrl+K)"
+          // A keyboard shortcut hint is noise on a device without a keyboard.
+          className="max-sm:hidden"
+          icon={IS_APPLE ? <Command size={14} /> : null}
+          title={`Command palette (${IS_APPLE ? '\u2318' : 'Ctrl+'}K)`}
+          aria-label="Open the command palette"
+          aria-keyshortcuts={IS_APPLE ? 'Meta+K' : 'Control+K'}
         >
-          <span className="font-mono text-[10px] text-ink-400">Ctrl K</span>
+          <span aria-hidden="true" className="font-mono text-xs text-ink-300">
+            {IS_APPLE ? 'K' : 'Ctrl K'}
+          </span>
         </Button>
 
         <Button
           variant="subtle"
-          icon={<Save size={14} />}
+          icon={<Save size={15} />}
           onClick={() => {
             setSlot(activeSlot)
             setDialog('save')
           }}
           disabled={!configured}
+          aria-describedby={configured ? undefined : 'save-disabled-reason'}
           title={
             configured
               ? 'Commit this version to the project repo'
@@ -124,10 +148,15 @@ export function TitleBar() {
         >
           Save
         </Button>
+        {configured ? null : (
+          <span id="save-disabled-reason" className="sr-only">
+            Saving needs a project repository. Set one up in Settings.
+          </span>
+        )}
 
         <Button
           variant="primary"
-          icon={<Download size={14} />}
+          icon={<Download size={15} />}
           onClick={() => setDialog('export')}
           title="Build a .mcaddon in the browser"
         >

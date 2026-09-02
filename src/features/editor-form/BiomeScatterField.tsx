@@ -105,7 +105,7 @@ export function BiomeScatterField({
 
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs text-ink-50">{node.displayName}</span>
-                <span className="block truncate font-mono text-[10px] text-ink-400">
+                <span className="block truncate font-mono text-xs text-ink-300">
                   {project.namespace}:{node.name}
                 </span>
               </span>
@@ -128,7 +128,7 @@ export function BiomeScatterField({
                 >
                   <div className="flex flex-col gap-2.5 border-t border-ink-700/70 px-2.5 py-2.5">
                     <label className="flex items-center gap-2.5">
-                      <span className="w-24 shrink-0 text-[11px] text-ink-200">How common</span>
+                      <span className="w-24 shrink-0 text-xs text-ink-200">How common</span>
                       <input
                         type="range"
                         min={MIN_WEIGHT}
@@ -138,16 +138,16 @@ export function BiomeScatterField({
                         onChange={(event) =>
                           update(entry.plant, { weight: Number(event.target.value) })
                         }
-                        className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-ink-600 accent-[var(--color-accent-500)]"
+                        className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-ink-600 accent-[var(--color-accent-500)]"
                       />
-                      <span className="w-16 shrink-0 text-right font-mono text-[11px] text-ink-100">
+                      <span className="w-16 shrink-0 text-right font-mono text-xs text-ink-100">
                         {entry.weight}
-                        <span className="text-ink-400"> / {totalWeight}</span>
+                        <span className="text-ink-300"> / {totalWeight}</span>
                       </span>
                     </label>
 
                     <label className="flex items-center gap-2.5">
-                      <span className="w-24 shrink-0 text-[11px] text-ink-200">Generates as</span>
+                      <span className="w-24 shrink-0 text-xs text-ink-200">Generates as</span>
                       <select
                         value={entry.maturity}
                         onChange={(event) =>
@@ -166,7 +166,7 @@ export function BiomeScatterField({
                     </label>
 
                     <label className="flex items-center gap-2.5">
-                      <span className="w-24 shrink-0 text-[11px] text-ink-200">Grows on</span>
+                      <span className="w-24 shrink-0 text-xs text-ink-200">Grows on</span>
                       <input
                         value={entry.placeOn.join(', ')}
                         onChange={(event) =>
@@ -181,7 +181,7 @@ export function BiomeScatterField({
                         className={cn(inputClass, 'flex-1 font-mono')}
                       />
                     </label>
-                    <p className="pl-[104px] text-[10.5px] leading-relaxed text-ink-400">
+                    <p className="pl-[104px] text-[10.5px] leading-relaxed text-ink-300">
                       Empty means whatever the crop is already plantable on
                       {plantOn ? ` — ${plantOn}` : ''}. Separate several blocks with commas.
                     </p>
@@ -191,7 +191,7 @@ export function BiomeScatterField({
                       onClick={() => update(entry.plant, { needsWater: !entry.needsWater })}
                       aria-pressed={entry.needsWater}
                       className={cn(
-                        'flex items-center gap-2 self-start rounded-md border px-2 py-1 text-[11px] transition-colors',
+                        'flex items-center gap-2 self-start rounded-md border px-2 py-1 text-xs transition-colors',
                         entry.needsWater
                           ? 'border-accent-500/60 bg-accent-500/15 text-accent-400'
                           : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',

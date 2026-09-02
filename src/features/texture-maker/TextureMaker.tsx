@@ -444,9 +444,9 @@ export function TextureMaker({
           type="button"
           onClick={onClose}
           aria-label="Close the texture maker"
-          className="rounded p-1 text-ink-300 transition-colors hover:bg-ink-750 hover:text-ink-50"
+          className="tap-target grid size-8 shrink-0 place-items-center rounded text-ink-300 transition-colors [transition-duration:var(--duration-state)] hover:bg-ink-750 hover:text-ink-50"
         >
-          <X size={15} />
+          <X size={16} aria-hidden="true" />
         </button>
       </header>
 
@@ -518,7 +518,7 @@ export function TextureMaker({
                   type="button"
                   onClick={() => changeSize(option)}
                   className={cn(
-                    'rounded border px-2 py-0.5 text-[11px] transition-colors',
+                    'rounded border px-2 py-0.5 text-xs transition-colors',
                     canvas.width === option && canvas.height === option
                       ? 'border-accent-500/60 bg-accent-500/15 text-accent-400'
                       : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',
@@ -535,7 +535,7 @@ export function TextureMaker({
                 type="button"
                 onClick={() => setShowTemplate((on) => !on)}
                 className={cn(
-                  'rounded border px-2 py-0.5 text-[11px] transition-colors',
+                  'rounded border px-2 py-0.5 text-xs transition-colors',
                   showTemplate
                     ? 'border-accent-500/60 bg-accent-500/15 text-accent-400'
                     : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',
@@ -547,7 +547,7 @@ export function TextureMaker({
 
             <div className="flex-1" />
 
-            <span className="font-mono text-[11px] text-ink-400">
+            <span className="font-mono text-xs text-ink-300">
               {hover ? `${hover.x}, ${hover.y}` : `${canvas.width}x${canvas.height}`}
             </span>
             <div className="flex items-center gap-1">
@@ -558,7 +558,7 @@ export function TextureMaker({
                 onClick={() => setZoom((z) => Math.max(2, z - 2))}
                 small
               />
-              <span className="w-8 text-center font-mono text-[11px] text-ink-300">{zoom}x</span>
+              <span className="w-8 text-center font-mono text-xs text-ink-300">{zoom}x</span>
               <IconToggle
                 icon={Plus}
                 label="Zoom in"
@@ -598,7 +598,7 @@ export function TextureMaker({
         {/* Colour ------------------------------------------------------ */}
         <div className="flex w-56 shrink-0 flex-col gap-3 overflow-y-auto border-l border-ink-700 p-3">
           <div>
-            <p className="pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+            <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
               Colour
             </p>
             <div className="flex items-center gap-2">
@@ -619,9 +619,9 @@ export function TextureMaker({
           </div>
 
           <div>
-            <label className="flex items-center justify-between pb-1 text-[11px] text-ink-200">
+            <label className="flex items-center justify-between pb-1 text-xs text-ink-200">
               Opacity
-              <span className="font-mono text-[10px] text-ink-400">
+              <span className="font-mono text-xs text-ink-300">
                 {Math.round((color.a / 255) * 100)}%
               </span>
             </label>
@@ -636,7 +636,7 @@ export function TextureMaker({
           </div>
 
           <div>
-            <p className="pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+            <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
               Palette
             </p>
             <div className="grid grid-cols-6 gap-1">
@@ -647,11 +647,11 @@ export function TextureMaker({
           </div>
 
           <div>
-            <p className="pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+            <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
               Recent
             </p>
             {recent.length === 0 ? (
-              <p className="text-[11px] text-ink-400">Colours you use show up here.</p>
+              <p className="text-xs text-ink-300">Colours you use show up here.</p>
             ) : (
               <div className="grid grid-cols-6 gap-1">
                 <AnimatePresence initial={false}>
@@ -672,14 +672,14 @@ export function TextureMaker({
                 style={{ background: rgbaToCss(hoverColor) }}
               />
               <span className="font-mono text-[10.5px] text-ink-200">{rgbaToHex(hoverColor)}</span>
-              <Droplet size={11} className="ml-auto text-ink-400" />
+              <Droplet size={11} className="ml-auto text-ink-300" />
             </div>
           ) : null}
         </div>
       </div>
 
       <footer className="flex h-12 shrink-0 items-center gap-2 border-t border-ink-700 px-3">
-        <p className="min-w-0 flex-1 truncate text-[11px] text-ink-400">
+        <p className="min-w-0 flex-1 truncate text-xs text-ink-300">
           Saved textures go through the same upload and commit path as a dropped PNG.
         </p>
         <Button size="sm" variant="ghost" icon={<Download size={12} />} onClick={exportPng}>

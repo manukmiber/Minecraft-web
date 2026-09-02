@@ -120,7 +120,7 @@ export function LayerGridField({
             [1, 'Height (Y)', height],
           ] as const
         ).map(([axis, label, current]) => (
-          <label key={axis} className="flex items-center gap-1.5 text-[11px] text-ink-300">
+          <label key={axis} className="flex items-center gap-1.5 text-xs text-ink-300">
             {label}
             <input
               type="number"
@@ -135,8 +135,8 @@ export function LayerGridField({
 
         <span
           className={cn(
-            'ml-auto font-mono text-[11px]',
-            overCap ? 'text-rose-500' : 'text-ink-400',
+            'ml-auto font-mono text-xs',
+            overCap ? 'text-rose-500' : 'text-ink-300',
           )}
           title={`Painted blocks, out of the ${MAX_GRID_BLOCKS}-block limit`}
         >
@@ -194,7 +194,7 @@ export function LayerGridField({
               }}
               title={id}
               className={cn(
-                'flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] transition-colors',
+                'flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs transition-colors',
                 brush === id && !erasing
                   ? 'border-accent-500/60 bg-accent-500/12 text-ink-50'
                   : 'border-ink-600 bg-ink-800 text-ink-300 hover:border-ink-500',
@@ -213,8 +213,8 @@ export function LayerGridField({
 
       {/* -- layer ------------------------------------------------------ */}
       <div className="flex items-center gap-2">
-        <Layers size={13} className="text-ink-400" />
-        <span className="text-[11px] text-ink-200">
+        <Layers size={13} className="text-ink-300" />
+        <span className="text-xs text-ink-200">
           Layer <span className="font-mono text-accent-400">Y {y}</span>
           <span className="text-ink-500"> of {height - 1}</span>
         </span>
@@ -296,7 +296,7 @@ export function LayerGridField({
         </div>
       </div>
 
-      <p className="text-[10.5px] leading-relaxed text-ink-400">
+      <p className="text-[10.5px] leading-relaxed text-ink-300">
         Drag to paint a run of cells. Empty cells are left as-is when the structure generates, so a
         doorway is a hole, not air. Each painted block becomes its own feature file — past{' '}
         {MAX_GRID_BLOCKS} blocks, export the build as a <code>.mcstructure</code> instead.

@@ -107,7 +107,7 @@ export function CodeEditor({ path }: { path: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-ink-800 bg-ink-900 px-3">
-        <span className="truncate font-mono text-[11px] text-ink-300">{path}</span>
+        <span className="truncate font-mono text-xs text-ink-300">{path}</span>
 
         {schemaLabel ? (
           <Badge tone="accent" className="gap-1">
@@ -176,7 +176,7 @@ export function CodeEditor({ path }: { path: string }) {
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/8 px-3 py-1.5 text-[11px] text-amber-500"
+          className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/8 px-3 py-1.5 text-xs text-amber-500"
         >
           <FileWarning size={12} className="shrink-0" />
           Wizard changes no longer reach this file. Revert to hand it back to the generator.
@@ -221,7 +221,7 @@ export function CodeEditor({ path }: { path: string }) {
             automaticLayout: true,
           }}
           loading={
-            <div className={cn('grid h-full place-items-center text-xs text-ink-400')}>
+            <div className={cn('grid h-full place-items-center text-xs text-ink-300')}>
               Loading editor…
             </div>
           }

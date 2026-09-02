@@ -6,6 +6,11 @@
  * The palette is VS Code Dark+ taken a shade deeper and pushed slightly cool,
  * with a single warm accent so generated/dirty state reads instantly. Every
  * surface is a token so the whole app can be re-skinned from this block.
+ *
+ * Contrast: ink-100/200/300 are all >=4.5:1 against every ink-950..ink-700
+ * surface, so any of them is safe for body text. ink-400 and ink-500 are
+ * non-text tokens (borders, dividers, decorative glyphs) and clear the 3:1
+ * non-text threshold; never use them for text that carries meaning.
  */
 @theme {
   --color-ink-950: #06080c;
@@ -15,12 +20,20 @@
   --color-ink-750: #171d29;
   --color-ink-700: #1c2330;
   --color-ink-600: #242c3b;
-  --color-ink-500: #313b4d;
-  --color-ink-400: #4a5568;
-  --color-ink-300: #6b7688;
-  --color-ink-200: #98a2b3;
-  --color-ink-100: #c7cede;
+  --color-ink-500: #3d4759;
+  --color-ink-400: #5f6b81;
+  --color-ink-300: #8792a6;
+  --color-ink-200: #b0b9c9;
+  --color-ink-100: #d3d9e5;
   --color-ink-50: #eef1f7;
+
+  /*
+   * The boundary of an interactive control carries information — it is what
+   * says "a field is here" — so it needs the 3:1 non-text ratio rather than the
+   * ink-600 hairline used for decorative panel edges. This clears 3.4:1 on
+   * every surface in the scale.
+   */
+  --color-edge: #6b7688;
 
   --color-accent-500: #4aa3ff;
   --color-accent-400: #6db6ff;
@@ -29,8 +42,8 @@
 
   --color-mint-500: #37d6a5;
   --color-amber-500: #f2b74a;
-  --color-rose-500: #ff6b81;
-  --color-violet-500: #a980ff;
+  --color-rose-500: #ff8095;
+  --color-violet-500: #b394ff;
 
   --font-sans:
     'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -43,6 +56,18 @@
   --shadow-float: 0 24px 60px -20px rgb(0 0 0 / 0.75);
 
   --ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /*
+   * Motion durations by distance travelled, not one value for everything:
+   * a hover tint settles faster than a panel that slides in from an edge.
+   */
+  --duration-tap: 90ms;
+  --duration-state: 140ms;
+  --duration-move: 200ms;
+  --duration-panel: 280ms;
+
+  /* Smallest hit area we ship, per the iOS 44pt / Android 48dp floor. */
+  --size-tap-min: 44px;
 }
 
 /* Base ------------------------------------------------------------------ */
@@ -58,9 +83,17 @@ body {
   background: var(--color-ink-950);
   color: var(--color-ink-100);
   font-family: var(--font-sans);
-  font-size: 13px;
+  /*
+   * A workspace this dense cannot carry a 16px base without losing a column,
+   * so the floor is 14px for prose and 12px for labels — never smaller.
+   */
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+  /* Fixed chrome sits inside the safe area on notched / gesture-bar devices. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 *,
@@ -72,6 +105,32 @@ body {
 button {
   font: inherit;
   color: inherit;
+}
+
+/*
+ * A visible focus indicator on everything, so nothing depends on a component
+ * remembering to add one. Components that want the accent glow instead layer
+ * `focus-ring` on top.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}
+
+/*
+ * Honour the OS "reduce motion" setting everywhere at once. Framer Motion is
+ * handled separately by MotionConfig in main.tsx; this covers CSS transitions,
+ * keyframes and smooth scrolling.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Scrollbars ------------------------------------------------------------ */
@@ -121,6 +180,51 @@ button {
 @utility focus-ring {
   outline: none;
   box-shadow: 0 0 0 1px var(--color-accent-500), 0 0 0 4px var(--color-accent-glow);
+}
+
+/*
+ * Skip link: first thing in the tab order, invisible until focused.
+ */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -100px;
+  z-index: 100;
+  border-radius: 6px;
+  background: var(--color-accent-500);
+  color: var(--color-ink-950);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: top var(--duration-state) var(--ease-swift);
+}
+
+.skip-link:focus-visible {
+  top: 8px;
+}
+
+/*
+ * Grows a small control's hit area to the 44px platform minimum on touch and
+ * pen input. It is a centred overlay, so the visual bounds and the surrounding
+ * layout never move — a press can't make the toolbar reflow.
+ *
+ * Scoped to coarse pointers on purpose: the desktop toolbars here sit on an
+ * 8px rhythm, and 44px boxes would overlap and steal each other's clicks.
+ */
+.tap-target {
+  position: relative;
+}
+
+@media (pointer: coarse) {
+  .tap-target::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--size-tap-min));
+    height: max(100%, var(--size-tap-min));
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* Text selection matches the accent so the app feels like one piece. */

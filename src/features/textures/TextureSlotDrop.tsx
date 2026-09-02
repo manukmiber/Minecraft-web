@@ -88,8 +88,16 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
         onClick={() => inputRef.current?.click()}
         role="button"
         tabIndex={0}
+        aria-label={
+          asset ? `Replace the ${slot.label} texture` : `Add a ${slot.label} texture`
+        }
+        aria-busy={uploading}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') inputRef.current?.click()
+          // Space scrolls the page by default, so both keys are handled here.
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            inputRef.current?.click()
+          }
         }}
         title={slot.help ?? `Drop a PNG for ${slot.label}`}
         className={cn(
@@ -97,8 +105,8 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
           dragging
             ? 'border-accent-500 bg-accent-500/12 shadow-[0_0_0_4px_var(--color-accent-glow)]'
             : asset
-              ? 'border-ink-600 bg-ink-900 hover:border-ink-500'
-              : 'border-dashed border-ink-600 bg-ink-900/60 hover:border-accent-500/60',
+              ? 'border-edge bg-ink-900 hover:border-ink-300'
+              : 'border-dashed border-edge bg-ink-900/60 hover:border-accent-500/60',
         )}
       >
         <AnimatePresence mode="wait">
@@ -111,7 +119,7 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
               className="flex flex-col items-center gap-1.5"
             >
               <Spinner />
-              <span className="text-[10px] text-ink-300">Uploading…</span>
+              <span className="text-xs text-ink-300">Uploading…</span>
             </motion.div>
           ) : url ? (
             <motion.img
@@ -130,10 +138,10 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
               key="missing"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center gap-1 text-ink-400"
+              className="flex flex-col items-center gap-1 text-ink-300"
             >
               <ImageOff size={16} />
-              <span className="px-1 text-center text-[9px] leading-tight">
+              <span className="px-1 text-center text-xs leading-tight">
                 bytes not cached — re-drop the file
               </span>
             </motion.div>
@@ -143,11 +151,11 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-1 text-ink-400 transition-colors group-hover:text-ink-200"
+              className="flex flex-col items-center gap-1 text-ink-300 transition-colors group-hover:text-ink-200"
             >
               <Upload size={15} />
               <span className="text-[9.5px]">Drop PNG</span>
-              <span className="text-[9px] text-ink-500">or draw it</span>
+              <span className="text-xs text-ink-500">or draw it</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -160,7 +168,7 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
           }}
           title={asset ? `Edit ${slot.label} in the texture maker` : `Draw ${slot.label} pixel by pixel`}
           aria-label={asset ? `Edit ${slot.label}` : `Draw ${slot.label}`}
-          className="absolute bottom-1 left-1 rounded bg-ink-950/80 p-1 text-ink-300 opacity-0 transition-opacity hover:text-accent-400 focus-visible:opacity-100 group-hover:opacity-100"
+          className="tap-target absolute bottom-1 left-1 grid size-6 place-items-center rounded bg-ink-950/80 text-ink-300 opacity-0 transition-opacity [transition-duration:var(--duration-state)] hover:text-accent-400 focus-visible:opacity-100 group-hover:opacity-100"
         >
           <Pencil size={11} />
         </button>
@@ -173,7 +181,7 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
               setNodeTexture(node.id, slot.key, null)
             }}
             aria-label={`Clear ${slot.label}`}
-            className="absolute right-1 top-1 rounded bg-ink-950/80 p-0.5 text-ink-300 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100"
+            className="tap-target absolute right-1 top-1 grid size-6 place-items-center rounded bg-ink-950/80 text-ink-300 opacity-0 transition-opacity [transition-duration:var(--duration-state)] hover:text-rose-500 focus-visible:opacity-100 group-hover:opacity-100"
           >
             <X size={11} />
           </button>
@@ -185,11 +193,11 @@ export function TextureSlotDrop({ node, slot }: { node: ContentNode; slot: Textu
       </div>
 
       <div className="flex items-center gap-1">
-        <span className="min-w-0 flex-1 truncate text-[10px] text-ink-300" title={slot.label}>
+        <span className="min-w-0 flex-1 truncate text-xs text-ink-300" title={slot.label}>
           {slot.label}
         </span>
         {asset?.width ? (
-          <Badge tone="neutral" className="px-1 py-0 text-[9px] tracking-normal normal-case">
+          <Badge tone="neutral" className="px-1 py-0 text-xs tracking-normal normal-case">
             {asset.width}px
           </Badge>
         ) : null}

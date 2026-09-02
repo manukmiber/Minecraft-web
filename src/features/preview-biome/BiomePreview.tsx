@@ -153,13 +153,13 @@ export function BiomePreview({ node }: { node: ContentNode }) {
       <div className="flex flex-col gap-3 p-3">
         <div>
           <p className="text-sm font-semibold text-ink-50">{node.displayName}</p>
-          <p className="font-mono text-[10.5px] text-ink-400">
+          <p className="font-mono text-[10.5px] text-ink-300">
             {project.namespace}:{node.name}
           </p>
         </div>
 
         {nested ? (
-          <p className="rounded-md border border-amber-500/30 bg-amber-500/[0.07] px-2.5 py-2 text-[11px] leading-relaxed text-ink-200">
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/[0.07] px-2.5 py-2 text-xs leading-relaxed text-ink-200">
             Nested in <span className="font-mono">{str(data, 'hostBiome', 'plains')}</span>. No new
             region of world is generated and no colours are shipped — the host biome keeps its own
             look, and this only adds the plants below.
@@ -179,7 +179,7 @@ export function BiomePreview({ node }: { node: ContentNode }) {
         <Panel title="Climate">
           <Meter label="Temperature" value={num(data, 'temperature', 0.8)} max={2} />
           <Meter label="Downfall" value={num(data, 'downfall', 0.8)} max={1} />
-          <p className="pt-1 text-[11px] leading-relaxed text-ink-300">{climateSentence(data)}</p>
+          <p className="pt-1 text-xs leading-relaxed text-ink-300">{climateSentence(data)}</p>
         </Panel>
 
         {/* -- plants ------------------------------------------------------- */}
@@ -187,14 +187,14 @@ export function BiomePreview({ node }: { node: ContentNode }) {
           title="Grows wild here"
           right={
             entries.length > 0 ? (
-              <span className="font-mono text-[10px] text-ink-400">
+              <span className="font-mono text-xs text-ink-300">
                 ≈{estimate.plantsPerChunk}/chunk
               </span>
             ) : null
           }
         >
           {entries.length === 0 ? (
-            <p className="flex items-center gap-1.5 text-[11px] text-ink-400">
+            <p className="flex items-center gap-1.5 text-xs text-ink-300">
               <Sprout size={12} /> Nothing assigned — this biome generates bare.
             </p>
           ) : (
@@ -209,10 +209,10 @@ export function BiomePreview({ node }: { node: ContentNode }) {
                       onClick={() => plant && openNode(plant.id)}
                       className="flex items-center gap-2 text-left"
                     >
-                      <span className="min-w-0 flex-1 truncate text-[11px] text-ink-100">
+                      <span className="min-w-0 flex-1 truncate text-xs text-ink-100">
                         {plant?.displayName ?? 'Deleted crop'}
                       </span>
-                      <span className="shrink-0 font-mono text-[10px] text-mint-500">{share}%</span>
+                      <span className="shrink-0 font-mono text-xs text-mint-500">{share}%</span>
                     </button>
                     <div className="h-1 overflow-hidden rounded-full bg-ink-800">
                       <div
@@ -220,7 +220,7 @@ export function BiomePreview({ node }: { node: ContentNode }) {
                         style={{ width: `${share}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-ink-400">
+                    <p className="text-xs text-ink-300">
                       {MATURITY_LABEL[entry.maturity]}
                       {entry.needsWater ? ' · needs water beside it' : ''}
                       {entry.placeOn.length > 0 ? ` · on ${entry.placeOn.join(', ')}` : ''}
@@ -237,12 +237,12 @@ export function BiomePreview({ node }: { node: ContentNode }) {
           <Panel title="Crows">
             <div className="flex items-baseline gap-2">
               <span className="font-mono text-lg text-ink-50">{effective.crowsPerChunk}</span>
-              <span className="text-[11px] text-ink-300">crows per chunk</span>
+              <span className="text-xs text-ink-300">crows per chunk</span>
               <Badge tone={num(data, 'crowDensity', 0) > 0 ? 'warn' : 'neutral'} className="ml-auto">
                 {num(data, 'crowDensity', 0) > 0 ? 'manual' : 'estimated'}
               </Badge>
             </div>
-            <p className="pt-1 text-[11px] leading-relaxed text-ink-300">
+            <p className="pt-1 text-xs leading-relaxed text-ink-300">
               {entries.length === 0
                 ? 'No plants yet, so nothing draws crows here.'
                 : `${estimate.plantsPerChunk} plants per chunk feeds about ${estimate.crowsPerChunk} birds — a spawn density limit of ${effective.densityLimit}.`}
@@ -255,7 +255,7 @@ export function BiomePreview({ node }: { node: ContentNode }) {
                   <button
                     type="button"
                     onClick={() => openNode(crow.id)}
-                    className="truncate text-[11px] text-ink-100 hover:text-ink-50"
+                    className="truncate text-xs text-ink-100 hover:text-ink-50"
                   >
                     {crow.displayName}
                   </button>
@@ -266,7 +266,7 @@ export function BiomePreview({ node }: { node: ContentNode }) {
                     {crowReaches ? (crowTuned ? 'wired up' : 'reaches, untuned') : 'cannot reach'}
                   </Badge>
                 </div>
-                <p className="text-[10.5px] leading-relaxed text-ink-400">
+                <p className="text-[10.5px] leading-relaxed text-ink-300">
                   Spawns on tag{' '}
                   <span className="font-mono">{str(crow.data, 'spawnBiomeTag') || 'none'}</span>,
                   density limit {num(crow.data, 'spawnDensityLimit', 0)}.
@@ -278,13 +278,13 @@ export function BiomePreview({ node }: { node: ContentNode }) {
                 )}
               </div>
             ) : (
-              <p className="pt-1.5 text-[11px] text-ink-400">
+              <p className="pt-1.5 text-xs text-ink-300">
                 Pick a crow under Crows in the form to see how its spawn rules line up.
               </p>
             )}
 
             {scarecrow ? (
-              <p className="pt-2 text-[11px] leading-relaxed text-ink-300">
+              <p className="pt-2 text-xs leading-relaxed text-ink-300">
                 <button
                   type="button"
                   onClick={() => openNode(scarecrow.id)}
@@ -301,7 +301,7 @@ export function BiomePreview({ node }: { node: ContentNode }) {
 
         {/* -- what export writes ------------------------------------------- */}
         <Panel title="Generates">
-          <p className="pb-1.5 text-[11px] text-ink-300">
+          <p className="pb-1.5 text-xs text-ink-300">
             Scoped to <span className="font-mono text-ink-100">{nested ? str(data, 'hostBiome', 'plains') : ownTag}</span>
             {nested ? ' (host biome)' : ' (this biome only)'}.
           </p>
@@ -315,7 +315,7 @@ export function BiomePreview({ node }: { node: ContentNode }) {
                   className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-ink-800"
                 >
                   <FileJson size={10} className="shrink-0 text-ink-500" />
-                  <span className="truncate font-mono text-[10px] text-ink-300">{path}</span>
+                  <span className="truncate font-mono text-xs text-ink-300">{path}</span>
                 </button>
               </li>
             ))}
@@ -362,7 +362,7 @@ function Panel({
   return (
     <section className="rounded-lg border border-ink-700 bg-ink-850/60 p-2.5">
       <header className="flex items-center justify-between gap-2 pb-2">
-        <h4 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-300">
+        <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-300">
           {title}
         </h4>
         {right}
@@ -382,7 +382,7 @@ function Swatches({ items }: { items: Array<[string, string]> }) {
             style={{ background: color }}
             title={color}
           />
-          <span className="text-[9.5px] text-ink-400">{label}</span>
+          <span className="text-[9.5px] text-ink-300">{label}</span>
         </div>
       ))}
     </div>
@@ -393,14 +393,14 @@ function Meter({ label, value, max }: { label: string; value: number; max: numbe
   const pct = Math.round((Math.min(Math.max(value, 0), max) / max) * 100)
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <span className="w-20 shrink-0 text-[11px] text-ink-300">{label}</span>
+      <span className="w-20 shrink-0 text-xs text-ink-300">{label}</span>
       <span className="h-1 flex-1 overflow-hidden rounded-full bg-ink-800">
         <span
           className={cn('block h-full rounded-full', label === 'Temperature' ? 'bg-amber-500' : 'bg-accent-500')}
           style={{ width: `${pct}%` }}
         />
       </span>
-      <span className="w-8 shrink-0 text-right font-mono text-[10px] text-ink-200">{value}</span>
+      <span className="w-8 shrink-0 text-right font-mono text-xs text-ink-200">{value}</span>
     </div>
   )
 }

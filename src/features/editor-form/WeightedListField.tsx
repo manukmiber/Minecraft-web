@@ -102,7 +102,7 @@ export function WeightedListField({
               />
 
               <span
-                className="w-12 shrink-0 text-right font-mono text-[11px] text-mint-500"
+                className="w-12 shrink-0 text-right font-mono text-xs text-mint-500"
                 title="Share of placements this entry wins"
               >
                 {share === null ? '—' : `${share.toFixed(share < 10 ? 1 : 0)}%`}
@@ -112,7 +112,7 @@ export function WeightedListField({
                 type="button"
                 onClick={() => onChange(rows.filter((_, i) => i !== index))}
                 aria-label={`Remove entry ${index + 1}`}
-                className="grid size-7 shrink-0 place-items-center rounded text-ink-400 transition-colors hover:text-rose-500"
+                className="grid size-7 shrink-0 place-items-center rounded text-ink-300 transition-colors hover:text-rose-500"
               >
                 <X size={12} />
               </button>
@@ -130,7 +130,7 @@ export function WeightedListField({
           Add block
         </Button>
         {rows.length > 1 ? (
-          <span className="text-[10.5px] text-ink-400">
+          <span className="text-[10.5px] text-ink-300">
             Weights are relative — 3 and 1 is the same as 75% and 25%.
           </span>
         ) : null}
