@@ -33,6 +33,7 @@ export function CompanionDock() {
     mood,
     gesture,
     sway,
+    framing,
     corner,
     size,
     offsetX,
@@ -145,7 +146,8 @@ export function CompanionDock() {
 
   if (!enabled || status !== 'ready' || !asset) return null
 
-  const width = Math.round(size * 0.78)
+  // A bust wants a squarer frame; a standing figure wants a tall thin one.
+  const width = Math.round(size * (framing === 'bust' ? 1 : 0.78))
 
   return (
     <div
@@ -204,7 +206,7 @@ export function CompanionDock() {
           sway={sway}
           reducedMotion={reducedMotion}
           look={look}
-          framing={1}
+          framing={framing === 'bust' ? 0 : 1}
         />
 
         {/*

@@ -37,6 +37,9 @@ export type CompanionCorner = 'bottom-right' | 'bottom-left'
 
 export type CompanionStatus = 'absent' | 'loading' | 'ready' | 'error'
 
+/** How much of her is in frame. */
+export type CompanionFraming = 'full' | 'bust'
+
 export interface CompanionBubble {
   id: number
   text: string
@@ -60,6 +63,7 @@ interface CompanionState {
   offsetY: number
   chatter: ChatterLevel
   sway: boolean
+  framing: CompanionFraming
   /** Remembers which model was loaded, so the label survives a reload. */
   modelLabel: string | null
 
@@ -84,6 +88,7 @@ interface CompanionState {
   resetPlacement(): void
   setChatter(chatter: ChatterLevel): void
   setSway(sway: boolean): void
+  setFraming(framing: CompanionFraming): void
 
   /** Reads a dropped zip or folder, stores it, and builds the scene. */
   importModel(files: File[] | FileList): Promise<void>
@@ -93,6 +98,8 @@ interface CompanionState {
   switchModel(path: string): Promise<void>
   forget(): Promise<void>
 
+  /** Holds an expression so a model's morphs can be checked one at a time. */
+  setMood(mood: CompanionMoodName): void
   say(event: CompanionEvent, detail?: string): void
   clearBubble(id: number): void
   play(gesture: CompanionGestureName): void
@@ -135,6 +142,7 @@ export const useCompanion = create<CompanionState>()(
       offsetY: 0,
       chatter: 'normal',
       sway: true,
+      framing: 'full',
       modelLabel: null,
 
       status: 'absent',
@@ -155,6 +163,7 @@ export const useCompanion = create<CompanionState>()(
       resetPlacement: () => set({ offsetX: 0, offsetY: 0 }),
       setChatter: (chatter) => set({ chatter }),
       setSway: (sway) => set({ sway }),
+      setFraming: (framing) => set({ framing }),
 
       async importModel(files) {
         set({ status: 'loading', error: null, warnings: [] })
@@ -227,6 +236,10 @@ export const useCompanion = create<CompanionState>()(
         })
       },
 
+      setMood(mood) {
+        set({ mood, bubble: null })
+      },
+
       say(event, detail) {
         const { chatter, bubble, asset } = get()
         // Nothing to say through, and nothing to say it with.
@@ -268,6 +281,7 @@ export const useCompanion = create<CompanionState>()(
         offsetY: state.offsetY,
         chatter: state.chatter,
         sway: state.sway,
+        framing: state.framing,
         modelLabel: state.modelLabel,
       }),
     },

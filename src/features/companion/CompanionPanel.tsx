@@ -18,13 +18,16 @@ import {
 } from 'lucide-react'
 
 import { Badge, Button, EmptyState, FieldRow, Section, Spinner, cn, inputClass } from '../../app/ui/primitives'
-import type { ChatterLevel } from '../../core/companion/dialogue'
+import type { ChatterLevel, CompanionMoodName } from '../../core/companion/dialogue'
+import type { CompanionAsset } from './buildModel'
+import { describeModel, type CompanionGesture } from './rig'
 import { filesFromDataTransfer } from '../../integrations/companion/archive'
 import {
   COMPANION_MAX_SIZE,
   COMPANION_MIN_SIZE,
   useCompanion,
   type CompanionCorner,
+  type CompanionFraming,
 } from '../../state/companion'
 
 const CHATTER_HELP: Record<ChatterLevel, string> = {
@@ -32,6 +35,30 @@ const CHATTER_HELP: Record<ChatterLevel, string> = {
   normal: 'The above, plus content you add, presets you apply and saves.',
   chatty: 'Everything, including undo, textures and the occasional word when the workspace goes quiet.',
 }
+
+const MOODS: Array<{ mood: CompanionMoodName; label: string }> = [
+  { mood: 'idle', label: 'Neutral' },
+  { mood: 'happy', label: 'Happy' },
+  { mood: 'thinking', label: 'Thinking' },
+  { mood: 'concerned', label: 'Concerned' },
+  { mood: 'proud', label: 'Proud' },
+  { mood: 'sleepy', label: 'Sleepy' },
+]
+
+const GESTURES: Array<{ gesture: CompanionGesture; label: string }> = [
+  { gesture: 'wave', label: 'Wave' },
+  { gesture: 'nod', label: 'Nod' },
+  { gesture: 'shake', label: 'Shake' },
+  { gesture: 'tilt', label: 'Tilt' },
+  { gesture: 'cheer', label: 'Cheer' },
+  { gesture: 'slump', label: 'Slump' },
+]
+
+const chipClass = cn(
+  'rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-[11px] text-ink-200',
+  'transition-colors [transition-duration:var(--duration-state)]',
+  'hover:border-accent-500/50 hover:bg-ink-700 hover:text-ink-50',
+)
 
 export function CompanionPanel() {
   const companion = useCompanion()
@@ -215,6 +242,47 @@ export function CompanionPanel() {
         ) : null}
       </Section>
 
+      {companion.status === 'ready' && asset ? (
+        <Section title="Check the model">
+          <p className="pb-1.5 text-[10.5px] leading-relaxed text-ink-300">
+            Every model names its morphs differently, so what she can pull is decided by
+            what yours happens to have. Try one and watch her.
+          </p>
+
+          <div className="flex flex-wrap gap-1">
+            {MOODS.map((entry) => (
+              <button
+                key={entry.mood}
+                type="button"
+                onClick={() => companion.setMood(entry.mood)}
+                aria-pressed={companion.mood === entry.mood}
+                className={cn(
+                  chipClass,
+                  companion.mood === entry.mood && 'border-accent-500 bg-accent-500/15 text-ink-50',
+                )}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-1">
+            {GESTURES.map((entry) => (
+              <button
+                key={entry.gesture}
+                type="button"
+                onClick={() => companion.play(entry.gesture)}
+                className={chipClass}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+
+          <ModelReport asset={asset} />
+        </Section>
+      ) : null}
+
       <Section title="Presence">
         <label className="flex items-start gap-2 py-2 text-xs leading-relaxed text-ink-100">
           <input
@@ -231,14 +299,35 @@ export function CompanionPanel() {
           </span>
         </label>
 
-        <FieldRow label="Corner" help="She never covers the activity rail or the status bar.">
+        <FieldRow
+          label="Corner"
+          htmlFor="companion-corner"
+          help="She never covers the activity rail or the status bar."
+        >
           <select
+            id="companion-corner"
             value={companion.corner}
             onChange={(event) => companion.setCorner(event.target.value as CompanionCorner)}
             className={inputClass}
           >
             <option value="bottom-right">Bottom right</option>
             <option value="bottom-left">Bottom left</option>
+          </select>
+        </FieldRow>
+
+        <FieldRow
+          label="Framing"
+          htmlFor="companion-framing"
+          help="A bust takes up far less of the corner, and is the better choice on a small screen."
+        >
+          <select
+            id="companion-framing"
+            value={companion.framing}
+            onChange={(event) => companion.setFraming(event.target.value as CompanionFraming)}
+            className={inputClass}
+          >
+            <option value="full">Head to toe</option>
+            <option value="bust">Head and shoulders</option>
           </select>
         </FieldRow>
 
@@ -263,8 +352,13 @@ export function CompanionPanel() {
       </Section>
 
       <Section title="Behaviour">
-        <FieldRow label="How much she says" help={CHATTER_HELP[companion.chatter]}>
+        <FieldRow
+          label="How much she says"
+          htmlFor="companion-chatter"
+          help={CHATTER_HELP[companion.chatter]}
+        >
           <select
+            id="companion-chatter"
             value={companion.chatter}
             onChange={(event) => companion.setChatter(event.target.value as ChatterLevel)}
             className={inputClass}
@@ -310,5 +404,37 @@ export function CompanionPanel() {
         </p>
       </Section>
     </div>
+  )
+}
+
+/**
+ * What the rig found in this particular model.
+ *
+ * Collapsed by default: it is diagnostic rather than daily, and it is the
+ * first thing worth opening when an expression does not seem to land.
+ */
+function ModelReport({ asset }: { asset: CompanionAsset }) {
+  const found = describeModel(asset)
+
+  return (
+    <details className="mt-2 rounded-lg border border-ink-700 bg-ink-850 p-2.5">
+      <summary className="cursor-pointer text-xs text-ink-200">
+        {found.expressions.length} expressions matched, {found.springBones} bones will swing
+      </summary>
+      <ul className="mt-1.5 flex flex-col gap-0.5">
+        {found.expressions.map((entry) => (
+          <li key={entry.slot} className="flex items-baseline justify-between gap-2 text-[10.5px]">
+            <span className="text-ink-300">{entry.label}</span>
+            <span className="truncate font-mono text-ink-100">{entry.morph}</span>
+          </li>
+        ))}
+      </ul>
+      {found.missing.length > 0 ? (
+        <p className="mt-1.5 border-t border-ink-700 pt-1.5 text-[10.5px] leading-relaxed text-ink-300">
+          Not in this model: {found.missing.join(', ')}. She simply does not use those.
+        </p>
+      ) : null}
+      <p className="mt-1.5 text-[10.5px] text-ink-300">{found.posedBones} bones posed directly.</p>
+    </details>
   )
 }

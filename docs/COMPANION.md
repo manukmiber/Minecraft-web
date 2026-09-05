@@ -96,6 +96,35 @@ standing pose and stops breathing, blinking and following the pointer.
 
 ---
 
+## Checking what your model can do
+
+Every model names its morphs differently, so what she is able to pull is
+decided by what yours happens to have. The Companion panel has a row of mood
+and gesture chips to try them against your own model, and a report underneath
+listing which expression slots matched and what they matched *to*:
+
+```
+19 expressions matched, 145 bones will swing
+  Blink            まばたき
+  Smiling eyes     笑い
+  Troubled brows   困る
+  …
+Not in this model: blush. She simply does not use those.
+```
+
+That is the first thing to open when an expression does not seem to land — it
+is usually a naming difference rather than a fault.
+
+Moods lean on the eyes and the mouth rather than the eyebrows, and that is not
+an aesthetic preference: most character models have a fringe, and a fringe
+hides eyebrows. A mood carried by the brows alone is a mood nobody can see.
+
+## Framing
+
+**Head to toe** or **head and shoulders**. A bust takes up far less of the
+corner and is the better choice on a small screen; the camera moves rather than
+the model, so nothing is cropped by the edge of the canvas.
+
 ## What she talks about
 
 Every line is a comment on something the app already reported. The chatter

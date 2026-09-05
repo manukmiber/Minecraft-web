@@ -35,6 +35,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     something already reported by a toast or the Problems panel, so muting her
     loses nothing. Three chatter levels; **Reduced motion** stills her; hiding
     her unmounts the canvas and takes the GPU cost to zero.
+  - **A way to check your own model.** Mood and gesture chips in the panel, and
+    a report of which expression slots matched and which morph each one found —
+    so a model that never smiles can be diagnosed as a naming difference rather
+    than guessed at. Moods are weighted towards the eyes and mouth rather than
+    the eyebrows, because most models have a fringe and a fringe hides eyebrows.
+  - **Framing.** Head to toe, or head and shoulders for a much smaller corner.
   - **The model never leaves the browser.** It is kept in IndexedDB and is never
     pushed to R2, committed to the project repo or written into an export, and
     `.gitignore` now refuses `.pmx`, `.pmd`, `.vmd` and `.vpd`. MMD models are

@@ -40,12 +40,16 @@ const MORPH_ALIASES = {
   mouthU: ['う', 'u'],
   mouthE: ['え', 'e'],
   mouthO: ['お', 'o'],
-  mouthSmile: ['にやり', 'わ', '∧'],
-  mouthFlat: ['一文字', 'む'],
+  // `い(歯閉じ笑み)` — a closed-teeth smile — is what a lot of Project Sekai
+  // models call this, and without it the happy face has no mouth to pull.
+  mouthSmile: ['にやり', 'わ', '∧', 'ω', 'い(歯閉じ笑み)', '笑み'],
+  mouthFlat: ['一文字', 'む', '口幅狭く'],
+  mouthWide: ['あ！', 'えぇ？', 'お2'],
+  pupilSmall: ['瞳小', '瞳孔小'],
   blush: ['頬染め', '照れ', 'blush'],
 } as const
 
-type MorphSlot = keyof typeof MORPH_ALIASES
+export type MorphSlot = keyof typeof MORPH_ALIASES
 
 /** Bones the rig poses directly, again Japanese first. */
 const BONE_ALIASES = {
@@ -79,6 +83,34 @@ const SWAY_NAME = /髪|房|ポニー|ツイン|もみあげ|リボン|ネクタ�
 /** Never sway these, whatever they are called: they carry the body. */
 const SWAY_EXCLUDE = /IK|ＩＫ|足|脚|ひざ|膝|つま先|腕|ひじ|肘|手首|指|首|頭|センター|グルーブ|上半身|下半身|目|操作/
 
+/**
+ * A plain-English name for each expression slot, so the panel can report what
+ * a model turned out to support without the reader having to know that
+ * `browTrouble` means the eyebrows.
+ */
+export const MORPH_LABELS: Record<MorphSlot, string> = {
+  blink: 'Blink',
+  wink: 'Wink',
+  smileEyes: 'Smiling eyes',
+  wideEyes: 'Wide eyes',
+  narrowEyes: 'Narrowed eyes',
+  browHappy: 'Happy brows',
+  browTrouble: 'Troubled brows',
+  browAngry: 'Angry brows',
+  browSerious: 'Serious brows',
+  browUp: 'Raised brows',
+  mouthA: 'Mouth A',
+  mouthI: 'Mouth I',
+  mouthU: 'Mouth U',
+  mouthE: 'Mouth E',
+  mouthO: 'Mouth O',
+  mouthSmile: 'Smile',
+  mouthFlat: 'Flat mouth',
+  mouthWide: 'Open mouth',
+  pupilSmall: 'Small pupils',
+  blush: 'Blush',
+}
+
 interface SpringBone {
   bone: THREE.Bone
   depth: number
@@ -97,13 +129,21 @@ interface PosedBone {
   rest: THREE.Quaternion
 }
 
+/**
+ * Each mood, as morph weights.
+ *
+ * Weighted towards the eyes and the mouth rather than the brows, and that is
+ * not an aesthetic preference: most character models have a fringe, and a
+ * fringe hides eyebrows. A mood carried by the brows alone is a mood nobody
+ * can see.
+ */
 const MOOD_FACE: Record<CompanionMood, Partial<Record<MorphSlot, number>>> = {
   idle: {},
-  happy: { browHappy: 0.85, smileEyes: 0.5, mouthSmile: 0.45, blush: 0.25 },
-  thinking: { browTrouble: 0.4, narrowEyes: 0.35, mouthFlat: 0.4 },
-  concerned: { browTrouble: 0.85, wideEyes: 0.2, mouthFlat: 0.3 },
-  proud: { browSerious: 0.7, mouthSmile: 0.3 },
-  sleepy: { blink: 0.55, browTrouble: 0.3, mouthFlat: 0.25 },
+  happy: { smileEyes: 0.9, browHappy: 1, mouthSmile: 0.7, blush: 0.3 },
+  thinking: { narrowEyes: 0.75, browTrouble: 0.6, mouthFlat: 0.65, pupilSmall: 0.3 },
+  concerned: { browTrouble: 1, wideEyes: 0.45, mouthWide: 0.3, pupilSmall: 0.5 },
+  proud: { browSerious: 0.9, narrowEyes: 0.3, mouthSmile: 0.55 },
+  sleepy: { blink: 0.68, browTrouble: 0.45, mouthFlat: 0.5 },
 }
 
 /**
@@ -120,6 +160,16 @@ const ARM_REST_ANGLE = 1.16
 /** A small forward and inward set, so the arms do not read as a flat plane. */
 const ARM_REST_YAW = 0.14
 const ELBOW_REST_BEND = 0.16
+
+/**
+ * How far above horizontal an arm reaches at full lift.
+ *
+ * Gesture lifts are given as 0–1, where 0 is the resting pose and 1 is here.
+ * Expressing them absolutely rather than as an offset is what stops a gesture
+ * silently shrinking on a model whose arms already hang lower: an offset would
+ * be spent cancelling the rest angle before it moved anything.
+ */
+const ARM_FULL_LIFT = 1.4
 
 const GESTURE_SECONDS: Record<CompanionGesture, number> = {
   wave: 1.9,
@@ -147,6 +197,69 @@ function findByAlias<T>(lookup: Map<string, T>, aliases: readonly string[]): T |
 function approach(current: number, target: number, rate: number, dt: number): number {
   // Frame-rate independent exponential ease; `rate` is roughly "per second".
   return current + (target - current) * (1 - Math.exp(-rate * dt))
+}
+
+/**
+ * What the rig will actually be able to do with a given model.
+ *
+ * Every MMD model names its morphs differently, and a model missing `にこり`
+ * simply cannot look pleased. Reporting that up front — rather than leaving
+ * someone to wonder why their import never smiles — is the difference between
+ * a limitation and a bug.
+ */
+export interface ModelCapabilities {
+  /** Expression slots that matched, with the morph each one found. */
+  expressions: Array<{ slot: MorphSlot; label: string; morph: string }>
+  /** Expression slots the model has nothing for. */
+  missing: MorphSlot[]
+  /** Bones the rig will pose directly. */
+  posedBones: number
+  /** Hair, skirt and ribbon chains that will swing. */
+  springBones: number
+}
+
+export function describeModel(asset: CompanionAsset): ModelCapabilities {
+  const expressions: ModelCapabilities['expressions'] = []
+  const missing: MorphSlot[] = []
+
+  for (const slot of Object.keys(MORPH_ALIASES) as MorphSlot[]) {
+    const name = findMorphName(asset, MORPH_ALIASES[slot])
+    if (name) expressions.push({ slot, label: MORPH_LABELS[slot], morph: name })
+    else missing.push(slot)
+  }
+
+  let posedBones = 0
+  for (const slot of Object.keys(BONE_ALIASES) as BoneSlot[]) {
+    if (findByAlias(asset.bones, BONE_ALIASES[slot])) posedBones++
+  }
+
+  return { expressions, missing, posedBones, springBones: countSpringBones(asset) }
+}
+
+/** The alias match, reported by name rather than by value. */
+function findMorphName(asset: CompanionAsset, aliases: readonly string[]): string | null {
+  for (const alias of aliases) if (asset.morphs.has(alias)) return alias
+  const lowered = new Map<string, string>()
+  for (const key of asset.morphs.keys()) lowered.set(key.toLowerCase(), key)
+  for (const alias of aliases) {
+    const hit = lowered.get(alias.toLowerCase())
+    if (hit) return hit
+  }
+  return null
+}
+
+/** Shared with the rig, so the report and the behaviour cannot disagree. */
+function countSpringBones(asset: CompanionAsset): number {
+  const simulated = new Set<number>()
+  for (const body of asset.source.rigidBodies) {
+    if (body.physicsMode !== 0 && body.boneIndex >= 0) simulated.add(body.boneIndex)
+  }
+  return asset.source.bones.filter(
+    (bone, index) =>
+      !SWAY_EXCLUDE.test(bone.name) &&
+      (SWAY_NAME.test(bone.name) || simulated.has(index)) &&
+      (bone.tailIndex >= 0 || bone.tailOffset !== null),
+  ).length
 }
 
 export class CompanionRig {
@@ -339,7 +452,11 @@ export class CompanionRig {
   }
 
   update(dt: number): void {
-    const step = Math.min(dt, 1 / 20)
+    // Capped only against the jump a backgrounded tab produces. It used to be
+    // 1/20, which quietly played every gesture in slow motion on a machine
+    // rendering below that — the spring pass has its own tighter clamp, so
+    // nothing here needed the outer one to be so strict.
+    const step = Math.min(dt, 1 / 10)
     this.clock += step
     this.idleFor += step
 
@@ -474,6 +591,11 @@ export class CompanionRig {
     posed.bone.quaternion.copy(posed.rest).multiply(this.scratch.quaternion)
   }
 
+  /** A 0–1 gesture lift, as the rotation to add on top of the resting arm. */
+  private lift(amount: number): number {
+    return amount * (this.armDrop + ARM_FULL_LIFT)
+  }
+
   private updateBody(dt: number): void {
     if (!this.motion) {
       // Still, but still standing: the base pose is not motion, it is posture.
@@ -511,8 +633,8 @@ export class CompanionRig {
 
     // Arms hang from the shoulder; positive Z lifts the left arm and lowers
     // the right, mirroring MMD's own convention.
-    this.setPose('armL', 0, gesture.armLYaw, gesture.armLLift)
-    this.setPose('armR', 0, -gesture.armRYaw, -gesture.armRLift)
+    this.setPose('armL', 0, gesture.armLYaw, this.lift(gesture.armLLift))
+    this.setPose('armR', 0, -gesture.armRYaw, -this.lift(gesture.armRLift))
     this.setPose('elbowL', 0, gesture.elbowL, 0)
     this.setPose('elbowR', 0, -gesture.elbowR, 0)
 
@@ -572,32 +694,33 @@ export class CompanionRig {
       case 'wave':
         return {
           ...zero,
-          armLLift: envelope * 1.15,
-          armLYaw: envelope * 0.25,
-          elbowL: envelope * (0.5 + Math.sin(t * Math.PI * 6) * 0.45),
-          headRoll: envelope * 0.06,
+          // Up beside the head, with the forearm doing the actual waving.
+          armLLift: envelope * 0.78,
+          armLYaw: envelope * 0.3,
+          elbowL: envelope * (0.7 + Math.sin(t * Math.PI * 6) * 0.5),
+          headRoll: envelope * 0.09,
         }
       case 'nod':
-        return { ...zero, headPitch: Math.sin(t * Math.PI * 2) * 0.28 }
+        return { ...zero, headPitch: Math.sin(t * Math.PI * 2) * 0.4 }
       case 'shake':
-        return { ...zero, headYaw: Math.sin(t * Math.PI * 4) * 0.22 }
+        return { ...zero, headYaw: Math.sin(t * Math.PI * 4) * 0.32 }
       case 'tilt':
-        return { ...zero, headRoll: envelope * 0.3, headYaw: envelope * 0.08 }
+        return { ...zero, headRoll: envelope * 0.42, headYaw: envelope * 0.1 }
       case 'cheer':
         return {
           ...zero,
-          armLLift: envelope * 1.5,
-          armRLift: envelope * 1.5,
+          armLLift: envelope * 0.95,
+          armRLift: envelope * 0.95,
           hop: Math.max(0, Math.sin(t * Math.PI * 2)) * 0.35,
-          headPitch: -envelope * 0.12,
+          headPitch: -envelope * 0.16,
         }
       case 'slump':
         return {
           ...zero,
-          bow: envelope * 0.16,
-          headPitch: envelope * 0.24,
-          armLLift: -envelope * 0.12,
-          armRLift: -envelope * 0.12,
+          bow: envelope * 0.22,
+          headPitch: envelope * 0.36,
+          armLLift: -envelope * 0.08,
+          armRLift: -envelope * 0.08,
         }
     }
   }
