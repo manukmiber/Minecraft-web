@@ -43,17 +43,20 @@ src/core/          pure TypeScript, no React — testable on its own
   schema/          JSON-schema bindings for the code editor
   vfs/             virtual file tree
   export/          artifact bundling (JSZip) and release channels
+  companion/       the PMX reader, model-bundle resolution and the line bank
 
 src/integrations/  the outside world
   github/          Git Data API client + the project-repo layout
   r2/              client for the Worker's R2 proxy
   assets/          IndexedDB cache + R2, PNG validation
+  companion/       zip/folder reading and the companion model's IndexedDB slot
 
 src/state/         zustand stores (project, settings, ui) and the service singletons
 src/app/           shell: activity bar, tabs, palette, status bar, panels
 src/features/      the panels and editors
   recipes/         the station builder, item browser and new-result form
   texture-maker/   the pixel editor, its PNG encoder and the texture panel
+  companion/       PMX → three.js, the rig, and the corner she stands in
 src/presets/       shipped preset data (the farming batch)
 worker/            the Cloudflare Worker: R2 proxy and nothing else
 ```
@@ -168,6 +171,22 @@ CHANGELOG.md
 A Save is a single commit built through the Git Data API (blobs → tree → commit
 → ref), carrying the model, its textures and the changelog entry together, so a
 half-written save is not a state that can exist.
+
+## The companion is the one thing that never leaves the browser
+
+Everything else in the app is built to end up somewhere durable: the model goes
+to the project repo, textures go to R2 and then to the repo, an export becomes a
+release. The companion's model does the opposite, and on purpose.
+
+MMD models are distributed under terms that almost always forbid
+redistribution, and a copy in a git repo or an R2 bucket is redistribution
+whether or not anyone else can read it. So `integrations/companion/modelStore.ts`
+writes to IndexedDB and stops there — no R2 push, no repo path, nothing in an
+export. `.gitignore` refuses `.pmx` and friends as a second line of defence.
+
+The knock-on is that the companion cannot be part of a Save, and that is
+correct: a save slot is the add-on, and the companion is not part of the
+add-on. `docs/COMPANION.md` has the rest.
 
 ## Where work happens
 

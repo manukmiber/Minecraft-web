@@ -18,6 +18,8 @@ import { TitleBar } from './TitleBar'
 import { Toasts } from './Toasts'
 import { ContentExplorer } from '../../features/explorer/ContentExplorer'
 import { FileExplorer } from '../../features/explorer/FileExplorer'
+import { CompanionDock } from '../../features/companion/CompanionDock'
+import { CompanionPanel } from '../../features/companion/CompanionPanel'
 import { CompatibilityView } from '../../features/compatibility/CompatibilityView'
 import { ReleasesView } from '../../features/releases/ReleasesView'
 import { PresetInbox } from '../../features/presets/PresetInbox'
@@ -44,6 +46,7 @@ const TITLES: Record<SideView, string> = {
   versions: 'Versions',
   compatibility: 'Compatibility',
   releases: 'Releases',
+  companion: 'Companion',
   settings: 'Settings',
 }
 
@@ -65,6 +68,8 @@ function SidePanelBody({ view }: { view: SideView }) {
       return <CompatibilityView />
     case 'releases':
       return <ReleasesView />
+    case 'companion':
+      return <CompanionPanel />
     case 'settings':
       return <SettingsView />
   }
@@ -247,6 +252,7 @@ export function AppShell() {
       <StatusBar />
       <CommandPalette />
       <TextureMakerHost />
+      <CompanionDock />
       <Toasts />
     </div>
   )

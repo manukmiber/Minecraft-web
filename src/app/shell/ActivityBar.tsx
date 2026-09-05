@@ -9,6 +9,7 @@ import {
   Inbox,
   LayoutGrid,
   Palette,
+  PersonStanding,
   Rocket,
   Settings,
   History,
@@ -41,6 +42,12 @@ const ITEMS: RailItem[] = [
     hint: 'What survives on Bedrock, on a Java data pack and in a Java mod',
   },
   { view: 'releases', icon: Rocket, label: 'Releases', hint: 'Alpha, beta and release builds' },
+  {
+    view: 'companion',
+    icon: PersonStanding,
+    label: 'Companion',
+    hint: 'Kohane — the model that keeps you company while you build',
+  },
 ]
 
 export function ActivityBar() {
