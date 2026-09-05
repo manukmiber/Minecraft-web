@@ -186,7 +186,7 @@ export function PresetInbox() {
                     onClick={async () => {
                       setApplying(entry.file.path)
                       try {
-                        const report = applyPresetFile(entry.preset!)
+                        const report = await applyPresetFile(entry.preset!)
                         // Archiving happens after the merge, so a failure here
                         // never leaves the inbox claiming work that was not done.
                         await projectRepo.archivePreset(

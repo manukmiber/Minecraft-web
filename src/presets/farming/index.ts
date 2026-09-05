@@ -411,11 +411,3 @@ export const FARMING_PRESETS: PresetFile[] = [
   paddyBiome,
   dishes,
 ]
-
-/**
- * Presets shipped with the app. Kept separate from the repo inbox so it is
- * always obvious which came from where.
- */
-export const BUILTIN_PRESET_PACKS: Array<{ id: string; label: string; presets: PresetFile[] }> = [
-  { id: 'farming', label: 'Farming', presets: FARMING_PRESETS },
-]

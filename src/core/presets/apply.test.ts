@@ -4,10 +4,11 @@ import { emitProject } from '../generators/emit'
 import { installBuiltinKinds, } from '../kinds'
 import { allKinds } from '../registry/types'
 import { createProject } from '../model/project'
-import type { ProjectModel } from '../model/types'
+import type { AssetRef, ProjectModel } from '../model/types'
+import { COMPANION_PRESETS } from '../../presets/companion'
 import { FARMING_PRESETS } from '../../presets/farming'
 import { applyPreset } from './apply'
-import { validatePreset } from './format'
+import { presetAssetKey, validatePreset } from './format'
 
 beforeAll(() => {
   installBuiltinKinds()
@@ -93,6 +94,62 @@ describe('farming presets', () => {
   })
 })
 
+describe('presets that carry their own artwork', () => {
+  const asset = (id: string): AssetRef => ({
+    id,
+    fileName: `${id}.png`,
+    mime: 'image/png',
+    size: 128,
+    width: 512,
+    height: 512,
+    r2Key: null,
+    repoPath: null,
+    addedAt: new Date().toISOString(),
+  })
+
+  it('fills the bound slots and lists the assets on the project', () => {
+    const report = applyPreset(createProject(), COMPANION_PRESETS[0], {
+      assets: new Map([
+        [presetAssetKey('entity:kohane', 'main'), asset('skin')],
+        [presetAssetKey('entity:kohane', 'spawn_egg'), asset('egg')],
+      ]),
+    })
+
+    const node = report.project.nodes.find((n) => n.name === 'kohane')!
+    expect(node.textures.main).toBe('skin')
+    expect(node.textures.spawn_egg).toBe('egg')
+    // The emitter only ships bytes for assets the project lists.
+    expect(report.project.assets.map((a) => a.id).sort()).toEqual(['egg', 'skin'])
+    expect(report.textures).toContain('entity:kohane.main')
+  })
+
+  it('still applies when a texture could not be loaded, leaving the slot empty', () => {
+    const report = applyPreset(createProject(), COMPANION_PRESETS[0], { assets: new Map() })
+
+    const node = report.project.nodes.find((n) => n.name === 'kohane')!
+    expect(node).toBeDefined()
+    expect(node.textures.main).toBeUndefined()
+    expect(report.textures).toEqual([])
+  })
+
+  it('leaves textures the node already had alone', () => {
+    let project = applyPreset(createProject(), COMPANION_PRESETS[0], {
+      assets: new Map([[presetAssetKey('entity:kohane', 'spawn_egg'), asset('egg')]]),
+    }).project
+    project = applyPreset(project, COMPANION_PRESETS[0], {
+      assets: new Map([[presetAssetKey('entity:kohane', 'main'), asset('skin')]]),
+    }).project
+
+    const node = project.nodes.find((n) => n.name === 'kohane')!
+    expect(node.textures).toEqual({ spawn_egg: 'egg', main: 'skin' })
+  })
+
+  it('accepts the shipped preset as valid', () => {
+    const kinds = new Set(allKinds().map((k) => k.id))
+    expect(validatePreset(COMPANION_PRESETS[0], kinds)).toMatchObject({ ok: true })
+  })
+})
+
 describe('validatePreset', () => {
   it('rejects an unknown kind', () => {
     const kinds = new Set(allKinds().map((k) => k.id))
@@ -111,6 +168,47 @@ describe('validatePreset', () => {
       kinds,
     )
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects artwork bound to a node the preset does not create', () => {
+    const kinds = new Set(allKinds().map((k) => k.id))
+    const result = validatePreset(
+      {
+        presetFormat: 1,
+        label: 'x',
+        nodes: [],
+        assets: [
+          { node: 'entity:ghost', slot: 'main', fileName: 'a.png', url: 'textures/a.png', width: 8, height: 8 },
+        ],
+      },
+      kinds,
+    )
+    expect(result.ok).toBe(false)
+    expect(result.errors.join(' ')).toContain('entity:ghost')
+  })
+
+  it('refuses artwork that points anywhere but the app’s own textures', () => {
+    const kinds = new Set(allKinds().map((k) => k.id))
+    const result = validatePreset(
+      {
+        presetFormat: 1,
+        label: 'x',
+        nodes: [{ kind: 'item', name: 'a', displayName: 'A' }],
+        assets: [
+          {
+            node: 'item:a',
+            slot: 'main',
+            fileName: 'a.png',
+            url: 'https://example.invalid/a.png',
+            width: 8,
+            height: 8,
+          },
+        ],
+      },
+      kinds,
+    )
+    expect(result.ok).toBe(false)
+    expect(result.errors.join(' ')).toContain('under "textures/"')
   })
 
   it('warns about a file outside the pack folders', () => {

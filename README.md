@@ -36,6 +36,15 @@ Bedrock 1.21.90 and Java 1.20.1.
   a crafting table's 3x3 grid, a furnace's input and fuel slots, or a tab
   generated for your own cookware block. The pattern, the key map and the recipe
   type are worked out for you, with a flat mock of the in-game screen beside it.
+- **Characters, not just mobs.** A companion body with layered hair, a swinging
+  skirt and eight facial expressions, plus a tameable temperament that follows
+  you, sits when told and defends you. The face is chosen in the render
+  controller from what is happening to her, so an expressive mob costs the
+  server nothing per tick.
+- **Presets can bring their own artwork.** A preset that describes a character
+  is useless without one, so a preset may carry PNGs — fetched, validated and
+  put through the same asset store a dropped file goes through, so it is
+  editable from the moment it lands.
 - **Code view when you want it.** A full Monaco editor with JSON schema
   validation. Generated files are read-only until you explicitly take one over,
   which records a tracked, revertible override.
@@ -127,6 +136,58 @@ placeable — which routes through the same block builder the wizard uses. The
 regeneration pass then wires the behaviour pack and the resource pack together
 the way it does for anything else.
 
+## Characters
+
+Entities are not only pests and props. The **Companion** body is a full
+character — layered hair with a fringe and twin tails, an open jacket over a
+shirt, a four-panel skirt that swings, boots — and the **Companion** temperament
+turns one into something you tame, that follows you, sits when told and fights
+beside you.
+
+![Kohane, seen from four sides](docs/images/kohane-turntable.png)
+
+The first one ships as a preset: **Kohane**, in the Presets panel. Apply it and
+she arrives complete, artwork and all — a preset may now carry its own PNGs, so
+a character is not an untextured mannequin waiting for you to draw one.
+
+### She has a face, and it costs nothing
+
+Eight expressions, picked every frame from what is actually happening to her:
+
+![Kohane's eight expressions](docs/images/kohane-expressions.png)
+
+They are eight flat bones stacked in the same place, and one Molang expression in
+`scripts.pre_animation` decides which is visible through the render controller's
+`part_visibility`. No behaviour script, no server tick, nothing running when
+nobody is looking at her. She blinks about every four and a half seconds, winces
+when she takes damage, grins while she walks, opens her mouth when she runs and
+dozes when she sits down.
+
+None of that is Kohane-specific. A body declares a *variant group* — any set of
+alternative bones — and the generator writes the selector for it. The 3D preview
+cycles the group so you can see every face while you draw them.
+
+### The artwork is code
+
+Her skin is not a PNG somebody drew and dropped in. It is painted by
+`src/core/generators/skin/`, in model units, against the very body spec that
+becomes the `.geo.json`:
+
+```bash
+node scripts/make-character.mjs           # the sheet and the spawn egg
+node scripts/make-character.mjs --scale 1 # the same character at vanilla resolution
+node scripts/render-character.mjs         # the pictures on this page
+```
+
+Because a cube's texture patch is derived from where the packer put it, moving a
+cube moves its artwork with it — the geometry and the sheet cannot drift apart.
+The shipped sheet is 512px over a 128-unit body, four times vanilla resolution;
+`--scale 1` gives you the chunky version of the same character.
+
+Every value is a field on the ordinary entity kind, so the same machinery makes
+somebody else entirely: swap the body preset and the sheet and the preset file
+describes a different character.
+
 ## The texture maker
 
 A pixel editor with the tools you would expect — pencil, eraser, fill,
@@ -141,7 +202,8 @@ opened it; **Export as PNG** just downloads it.
 
 Entity skins get a template: the UV layout of the chosen body preset is drawn
 over the canvas with each patch labelled, so you can see which rectangle is the
-head and which is a wing instead of guessing at a blank 64x64 square.
+head and which is a wing — or, on the companion body, which is the fringe and
+which is the left tail — instead of guessing at a blank square.
 
 PNGs are written by a small encoder in `src/features/texture-maker/png.ts`
 rather than through a canvas `toBlob`, because a canvas round trip premultiplies
@@ -302,6 +364,10 @@ project to a published release in one pass.
 - [`docs/TUTORIAL.md`](docs/TUTORIAL.md) — **start here.** End to end: an item, a
   crop, a crafting station, recipes, world generation, and a release with six
   files attached.
+- [`docs/CHARACTERS.md`](docs/CHARACTERS.md) — the in-game companion body, the
+  expression system, and how to paint a character of your own. (Not to be
+  confused with [`docs/COMPANION.md`](docs/COMPANION.md), which is the mascot
+  that stands in the corner of the workspace.)
 - [`docs/PLATFORMS.md`](docs/PLATFORMS.md) — Bedrock vs Java, the full support
   matrix, and why a Java data pack cannot add a block.
 - [`docs/CRAFTING_STATIONS.md`](docs/CRAFTING_STATIONS.md) — custom stations,

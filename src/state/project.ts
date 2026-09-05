@@ -23,6 +23,7 @@ import {
 } from '../core/model/project'
 import type { AssetRef, ContentNode, ProjectModel } from '../core/model/types'
 import { applyPreset } from '../core/presets/apply'
+import { loadPresetAssets } from '../features/presets/presetAssets'
 import type { ApplyReport } from '../core/presets/apply'
 import type { PresetFile } from '../core/presets/format'
 import type { VirtualFs } from '../core/vfs/types'
@@ -109,7 +110,13 @@ interface ProjectStore {
   forgetAsset(assetId: string): boolean
 
   setOverride(path: string, content: string | null): void
-  applyPresetFile(preset: PresetFile): ApplyReport
+  /**
+   * Applies a preset. Asynchronous because a preset may arrive with its own
+   * artwork, and that has to be fetched and cached before the slots can point
+   * at it — a texture that fails to load leaves its slot empty and is reported
+   * rather than aborting the whole apply.
+   */
+  applyPresetFile(preset: PresetFile): Promise<ApplyReport & { textureFailures: string[] }>
 
   undo(): void
   redo(): void
@@ -290,10 +297,14 @@ export const useProject = create<ProjectStore>((set, get) => ({
     get().commit(setOverrideOnProject(get().project, path, content))
   },
 
-  applyPresetFile(preset) {
-    const report = applyPreset(get().project, preset)
+  async applyPresetFile(preset) {
+    const project = get().project
+    const { resolved, failures } = await loadPresetAssets(preset, project.id)
+    // Re-read the project: awaiting the artwork gave the user time to change
+    // something, and applying to a stale copy would quietly undo it.
+    const report = applyPreset(get().project, preset, { assets: resolved })
     get().commit(report.project)
-    return report
+    return { ...report, textureFailures: failures }
   },
 
   undo() {
