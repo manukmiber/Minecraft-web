@@ -9,6 +9,39 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **A workspace companion.** Drop an MMD model into the new **Companion** panel
+  and a character stands in the corner of the workspace, reacting to what you
+  build.
+  - **A PMX reader written from scratch** (`src/core/companion/pmx.ts`), because
+    three.js removed `MMDLoader` in r167 and there is no addon left to lean on.
+    PMX 2.0 and 2.1, both text encodings, every index width, and every weight
+    scheme (BDEF1/2/4, SDEF, QDEF) flattened onto four influences. Unit tested
+    against files the tests build byte by byte, since a real model cannot be
+    committed.
+  - **Rendered the way MMD renders it.** The model's own toon ramps are rebuilt
+    as three.js gradient maps in full colour rather than the red channel three
+    reads by default; `.spa` and `.sph` sphere maps are injected after lighting;
+    and the inverted-hull outline is expanded in clip space, so the line weight
+    does not change with the size of the dock. Whether a material is opaque, cut
+    out or translucent is decided by measuring its texture's alpha, not by
+    guessing from the file name.
+  - **Procedural motion, no motion files.** A standing pose measured from the
+    model's own bind pose, breathing, weight shift, blinking, a head that
+    follows the pointer, vowel morphs while she talks, expressions composed from
+    whatever morphs the model has (matched in Japanese first), and hair and
+    skirt on spring bones worked out from the model's physics bodies. Gestures
+    fire from what the workspace just did.
+  - **She comments on the app, not instead of it.** Every line is about
+    something already reported by a toast or the Problems panel, so muting her
+    loses nothing. Three chatter levels; **Reduced motion** stills her; hiding
+    her unmounts the canvas and takes the GPU cost to zero.
+  - **The model never leaves the browser.** It is kept in IndexedDB and is never
+    pushed to R2, committed to the project repo or written into an export, and
+    `.gitignore` now refuses `.pmx`, `.pmd`, `.vmd` and `.vpd`. MMD models are
+    overwhelmingly distributed under terms that forbid redistribution, and a
+    copy in a repo or a bucket would be exactly that. See
+    [`docs/COMPANION.md`](docs/COMPANION.md).
+
 - **Vanilla artwork, from Faithful 32x.** Every `minecraft:` identifier the app
   offers is drawn with its real texture instead of a monogram or a hashed
   colour — in the item browser, in recipe slots, on the structure painter's
