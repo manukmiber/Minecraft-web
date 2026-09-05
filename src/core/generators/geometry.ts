@@ -3,41 +3,31 @@
  *
  * Uploading a hand-made `.geo.json` is supported, but most of the time you just
  * want a body that exists so the entity can be tested in-game and shown in the
- * 3D preview. These presets are ordinary Bedrock geometry, generated from a
- * compact bone spec, and the same spec feeds the three.js viewer — so what the
- * preview draws is literally what ships.
+ * 3D preview. These presets are ordinary Bedrock geometry, generated from the
+ * compact bone spec in `bodySpec.ts`, and the same spec feeds the three.js
+ * viewer — so what the preview draws is literally what ships.
  */
 
-export interface CubeSpec {
-  /** Bottom-north-west corner, in model units. */
-  origin: [number, number, number]
-  size: [number, number, number]
-  /** Top-left of this cube's box UV on the texture. */
-  uv: [number, number]
-  inflate?: number
-  mirror?: boolean
-}
+import { cubePatchSize } from './bodySpec'
+import type { BoneSpec, GeometrySpec } from './bodySpec'
+import { COMPANION } from './bodies/companion'
 
-export interface BoneSpec {
-  name: string
-  parent?: string
-  pivot: [number, number, number]
-  rotation?: [number, number, number]
-  cubes: CubeSpec[]
-}
+export type { BoneSpec, CubeSpec, GeometrySpec } from './bodySpec'
+export { cubePatchSize, packBody } from './bodySpec'
+export type { BodyDraft, BoneDraft, CubeDraft } from './bodySpec'
 
-export interface GeometrySpec {
-  textureWidth: number
-  textureHeight: number
-  visibleBoundsWidth: number
-  visibleBoundsHeight: number
-  visibleBoundsOffset: [number, number, number]
-  bones: BoneSpec[]
-}
+/* -------------------------------------------------------------------------- */
+/* Presets                                                                     */
+/* -------------------------------------------------------------------------- */
 
-export type BodyPreset = 'biped' | 'bird' | 'post' | 'cube'
+export type BodyPreset = 'biped' | 'bird' | 'post' | 'cube' | 'companion'
 
 export const BODY_PRESET_OPTIONS = [
+  {
+    value: 'companion',
+    label: 'Companion',
+    hint: 'Detailed character — layered hair, skirt, boots and eight facial expressions',
+  },
   { value: 'biped', label: 'Biped', hint: 'Villager-sized humanoid — NPCs, farmers, traders' },
   { value: 'bird', label: 'Bird', hint: 'Small winged body — crows, pests, critters' },
   { value: 'post', label: 'Post', hint: 'Static cross-shaped prop — scarecrows, totems, markers' },
@@ -236,6 +226,7 @@ const PRESETS: Record<BodyPreset, GeometrySpec> = {
   bird: BIRD,
   post: POST,
   cube: CUBE,
+  companion: COMPANION,
 }
 
 export function getBodyPreset(preset: string): GeometrySpec {
@@ -275,6 +266,11 @@ export function buildGeometryJson(
                     size: cube.size,
                     uv: cube.uv,
                     ...(cube.inflate ? { inflate: cube.inflate } : {}),
+                    // Bedrock only honours a cube rotation when the cube also
+                    // carries its own pivot, so the two travel together.
+                    ...(cube.rotation
+                      ? { rotation: cube.rotation, pivot: cube.pivot ?? bone.pivot }
+                      : {}),
                     ...(cube.mirror ? { mirror: true } : {}),
                   })),
                 }
@@ -283,6 +279,18 @@ export function buildGeometryJson(
       },
     ],
   }
+}
+
+/** The variant groups a spec declares, in the order the bones appear. */
+export function variantGroups(spec: GeometrySpec): Map<string, BoneSpec[]> {
+  const groups = new Map<string, BoneSpec[]>()
+  for (const bone of spec.bones) {
+    if (!bone.variant) continue
+    const list = groups.get(bone.variant.group)
+    if (list) list.push(bone)
+    else groups.set(bone.variant.group, [bone])
+  }
+  return groups
 }
 
 /**
@@ -310,13 +318,13 @@ export function geometryUvRegions(spec: GeometrySpec): UvRegion[] {
 
   for (const bone of spec.bones) {
     bone.cubes.forEach((cube, index) => {
-      const [w, h, d] = cube.size
+      const { width, height } = cubePatchSize(cube.size)
       const region: UvRegion = {
-        label: bone.cubes.length > 1 ? `${bone.name} ${index + 1}` : bone.name,
+        label: cube.label ?? (bone.cubes.length > 1 ? `${bone.name} ${index + 1}` : bone.name),
         x: cube.uv[0],
         y: cube.uv[1],
-        width: 2 * (d + w),
-        height: d + h,
+        width,
+        height,
       }
       const key = `${region.x},${region.y},${region.width},${region.height}`
       const existing = byRect.get(key)

@@ -79,6 +79,16 @@ Full description in [AI_ASSIST.md](./AI_ASSIST.md). The shape:
   "nodes": [
     { "kind": "crop", "name": "rice_plant", "displayName": "Rice", "data": { … } }
   ],
+  "assets": [                                                  // optional
+    {
+      "node": "entity:kohane",          // kind:name, of a node this preset creates
+      "slot": "main",                   // texture slot on that node
+      "fileName": "kohane.png",
+      "url": "textures/companion/kohane/kohane.png",  // app-relative, under textures/
+      "width": 512,
+      "height": 512
+    }
+  ],
   "files": [ { "path": "behavior_pack/…", "content": "…" } ]   // optional
 }
 ```
@@ -86,6 +96,27 @@ Full description in [AI_ASSIST.md](./AI_ASSIST.md). The shape:
 Cross-references use `#kind:name` and are resolved at apply time — to a node id
 for `node-ref` fields, and to `<namespace>:<name>` for item, block, list and
 grid fields.
+
+### `assets`
+
+A preset normally describes behaviour and leaves the PNGs to you. One whose
+point *is* a character can carry its own: each entry binds one image to one
+texture slot on one of the nodes the preset creates.
+
+The bytes go through the same asset store a dropped file does — validated as a
+PNG, cached locally, pushed to R2, listed on the project — so a preset texture
+is indistinguishable from one you dragged in, and is editable in the pixel
+editor from the moment it lands.
+
+- Exactly one of `url` or `base64` per entry.
+- `url` must be a path under `textures/`, served by the app. A preset from the
+  inbox is untrusted input; one that could name any host would be fetching bytes
+  off the internet the moment somebody pressed **Apply**. Use `base64` for
+  anything self-contained.
+- `node` must name a node the preset creates, or the file is rejected — a
+  texture bound to nothing would silently do nothing.
+- A texture that fails to load is not fatal: the preset still applies, that slot
+  stays empty, and the toast says which one is missing.
 
 ## Generated pack layout — Bedrock
 
@@ -120,7 +151,7 @@ resource_pack/
   render_controllers/<name>.render_controllers.json
   animations/<name>.animation.json
   animation_controllers/<name>.animation_controllers.json
-  textures/item_texture.json
+  textures/item_texture.json                ← also carries a painted spawn egg
   textures/terrain_texture.json
   textures/blocks/<namespace>/<namespace>_<name>[_<slot>].png
   textures/items/<namespace>/…

@@ -63,16 +63,31 @@ export class AssetStore {
     }
 
     const bytes = await file.arrayBuffer()
-    const probed = probePng(bytes)
-    if (!probed) {
-      throw new Error(`${file.name} does not look like a valid PNG.`)
+    const asset = await this.importBytes(bytes, file.name, projectId)
+
+    const { width, height } = asset
+    let warning: string | null = null
+    if (width === null || height === null) {
+      warning = null
+    } else if (width !== height) {
+      warning = `${file.name} is ${width}x${height}. Block and item textures should be square.`
+    } else if (recommended && width % recommended !== 0) {
+      warning = `${file.name} is ${width}px; this slot expects a multiple of ${recommended}px.`
     }
 
-    let warning: string | null = null
-    if (probed.width !== probed.height) {
-      warning = `${file.name} is ${probed.width}x${probed.height}. Block and item textures should be square.`
-    } else if (recommended && probed.width % recommended !== 0) {
-      warning = `${file.name} is ${probed.width}px; this slot expects a multiple of ${recommended}px.`
+    return { asset, warning }
+  }
+
+  /**
+   * Registers bytes that did not come through a file picker — the artwork a
+   * preset ships with, say. Deliberately the same path: same validation, same
+   * local cache, same background upload, so nothing downstream has to know
+   * where a texture originally came from.
+   */
+  async importBytes(bytes: ArrayBuffer, fileName: string, projectId: string): Promise<AssetRef> {
+    const probed = probePng(bytes)
+    if (!probed) {
+      throw new Error(`${fileName} does not look like a valid PNG.`)
     }
 
     const id = nodeId('asset')
@@ -80,9 +95,9 @@ export class AssetStore {
 
     const asset: AssetRef = {
       id,
-      fileName: file.name,
+      fileName,
       mime: 'image/png',
-      size: file.size,
+      size: bytes.byteLength,
       width: probed.width,
       height: probed.height,
       r2Key: null,
@@ -96,7 +111,7 @@ export class AssetStore {
       // Offline or no Worker: the local copy is enough to keep working.
     }
 
-    return { asset, warning }
+    return asset
   }
 
   /** Local cache first, then R2, so exporting works offline once warmed. */

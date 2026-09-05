@@ -90,9 +90,29 @@ resolved the app reports it instead of applying it silently.
 
 ### Textures
 
-Presets do **not** carry textures. Slots stay empty and the user drops PNGs in
-afterwards; the builder then writes the atlas entries and file paths. Do not try
-to reference image paths.
+Leave textures alone unless you are shipping artwork that already exists. Slots
+stay empty and the user drops PNGs in afterwards; the builder then writes the
+atlas entries and file paths. **Do not invent image paths** — a `url` that does
+not resolve is a texture that silently fails to load.
+
+A preset *may* carry artwork, through an optional `assets` array:
+
+```jsonc
+"assets": [
+  {
+    "node": "entity:kohane",     // kind:name, of a node this preset creates
+    "slot": "main",              // a texture slot that node declares
+    "fileName": "kohane.png",
+    "url": "textures/companion/kohane/kohane.png",
+    "width": 512,
+    "height": 512
+  }
+]
+```
+
+Use it only for images the app already ships under `public/textures/` — the
+validator rejects anything that is not a path under `textures/` — or inline the
+bytes as `base64` instead of `url` for something small and self-contained.
 
 ---
 
@@ -164,12 +184,17 @@ Texture slot: `main`.
 | `families` | string[] | other entities filter on these |
 | `isSummonable`, `hasSpawnEgg` | boolean | |
 | `eggBaseColor`, `eggOverlayColor` | `#rrggbb` | |
-| `bodyPreset` | `biped` \| `bird` \| `post` \| `cube` | generates geometry and matching animations |
+| `bodyPreset` | `companion` \| `biped` \| `bird` \| `post` \| `cube` | generates geometry and matching animations |
 | `scale`, `health`, `movementSpeed` | number | |
 | `collisionWidth`, `collisionHeight` | number, in blocks | |
-| `temperament` | `passive` \| `skittish` \| `stationary` \| `hostile` | |
+| `temperament` | `passive` \| `companion` \| `skittish` \| `stationary` \| `hostile` | |
 | `canFly` | boolean | swaps to flight navigation |
-| `attackDamage` | number | hostile only |
+| `attackDamage` | number | hostile, and a companion that defends its owner |
+| `tameItems` | string[] | companion only. Items that tame it; it is also tempted by them |
+| `followDistance` | number, in blocks | companion only. How far it may drift before returning |
+| `canSit`, `defendsOwner`, `canBeLeashed` | boolean | companion only |
+| `healItems`, `healAmount` | string[], number | companion only. Feeding one of these heals it |
+| `expressive` | boolean | picks a face per frame on a body that declares several. Ignored otherwise |
 | `tempted` | string[] | item identifiers the entity follows |
 | `despawns` | boolean | |
 | `avoidFamilies`, `avoidRadius` | string[], number | flees those families inside the radius |
@@ -184,7 +209,14 @@ Texture slot: `main`.
 | `spawnBrightnessMin`, `spawnBrightnessMax` | number 0–15 | |
 | `spawnHerdMin`, `spawnHerdMax` | number | |
 
-Texture slot: `main` (must match the UV layout of the chosen body preset).
+Texture slots: `main` (must match the UV layout of the chosen body preset, or a
+whole multiple of it for a higher-resolution character) and, when `hasSpawnEgg`
+is on, an optional `spawn_egg` icon. Without one the egg is tinted from
+`eggBaseColor` / `eggOverlayColor`.
+
+The `companion` body is a full character — layered hair, twin tails, a
+four-panel skirt, boots — and declares eight face variants, which is what
+`expressive` drives. See [COMPANIONS.md](./COMPANIONS.md).
 
 ### `biome`
 

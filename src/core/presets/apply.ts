@@ -9,8 +9,8 @@
 
 import { getKind } from '../registry/types'
 import { nodeId } from '../util/id'
-import type { ContentNode, ProjectModel } from '../model/types'
-import { isRef, parseRef } from './format'
+import type { AssetRef, ContentNode, ProjectModel } from '../model/types'
+import { isRef, parseRef, presetAssetKey } from './format'
 import type { PresetFile, PresetNode } from './format'
 
 export interface ApplyChange {
@@ -26,9 +26,28 @@ export interface ApplyReport {
   files: string[]
   /** Refs the preset made that could not be resolved to a node. */
   unresolved: string[]
+  /** Texture slots the preset filled in for you. */
+  textures: string[]
 }
 
-function buildNode(presetNode: PresetNode, existing?: ContentNode): ContentNode {
+export interface ApplyOptions {
+  /**
+   * Artwork the caller has already turned into assets, keyed by
+   * `presetAssetKey(node, slot)`.
+   *
+   * Reading bytes is asynchronous and applying is not: keeping the fetch
+   * outside means applying a preset stays a pure function of its inputs, and a
+   * texture that failed to download degrades to an empty slot rather than to a
+   * half-applied project.
+   */
+  assets?: Map<string, AssetRef>
+}
+
+function buildNode(
+  presetNode: PresetNode,
+  existing: ContentNode | undefined,
+  textures: Record<string, string>,
+): ContentNode {
   const kind = getKind(presetNode.kind)
   if (!kind) throw new Error(`Unknown content kind "${presetNode.kind}".`)
 
@@ -40,9 +59,10 @@ function buildNode(presetNode: PresetNode, existing?: ContentNode): ContentNode 
     displayName: presetNode.displayName?.trim() || presetNode.name,
     // Defaults first so a preset only has to state what it cares about.
     data: { ...kind.defaults(), ...(presetNode.data ?? {}) },
-    // Textures are never carried by a preset — a preset describes behaviour,
-    // and the PNGs stay yours to drop in.
-    textures: existing?.textures ?? {},
+    // A preset normally describes behaviour and leaves the PNGs to you; one
+    // that ships its own artwork fills the slots it brought and leaves the
+    // rest of the node's existing textures alone.
+    textures: { ...(existing?.textures ?? {}), ...textures },
     presetId: presetNode.kind === existing?.kind ? existing?.presetId : undefined,
     notes: presetNode.notes,
     createdAt: existing?.createdAt ?? now,
@@ -50,9 +70,26 @@ function buildNode(presetNode: PresetNode, existing?: ContentNode): ContentNode 
   }
 }
 
-export function applyPreset(project: ProjectModel, preset: PresetFile): ApplyReport {
+export function applyPreset(
+  project: ProjectModel,
+  preset: PresetFile,
+  options: ApplyOptions = {},
+): ApplyReport {
   const changes: ApplyChange[] = []
   const unresolved: string[] = []
+  const filled: string[] = []
+
+  // Slot bindings the caller managed to resolve, grouped by the node they
+  // belong to so building a node can take its textures in one go.
+  const byNode = new Map<string, Record<string, string>>()
+  for (const asset of preset.assets ?? []) {
+    const resolved = options.assets?.get(presetAssetKey(asset.node, asset.slot))
+    if (!resolved) continue
+    const slots = byNode.get(asset.node) ?? {}
+    slots[asset.slot] = resolved.id
+    byNode.set(asset.node, slots)
+    filled.push(`${asset.node}.${asset.slot}`)
+  }
 
   // Start from the current nodes, then create or replace by kind+name.
   const nodes = [...project.nodes]
@@ -62,7 +99,11 @@ export function applyPreset(project: ProjectModel, preset: PresetFile): ApplyRep
   for (const presetNode of preset.nodes ?? []) {
     const at = indexOf(presetNode.kind, presetNode.name)
     const existing = at >= 0 ? nodes[at] : undefined
-    const node = buildNode(presetNode, existing)
+    const node = buildNode(
+      presetNode,
+      existing,
+      byNode.get(`${presetNode.kind}:${presetNode.name}`) ?? {},
+    )
     node.presetId = preset.id
 
     if (at >= 0) {
@@ -180,15 +221,25 @@ export function applyPreset(project: ProjectModel, preset: PresetFile): ApplyRep
     files.push(file.path)
   }
 
+  // Any asset the preset brought has to be listed on the project, or the
+  // emitter will not ship its bytes and a Save will not carry it to the repo.
+  const known = new Set(project.assets.map((asset) => asset.id))
+  const assets = [
+    ...project.assets,
+    ...[...(options.assets?.values() ?? [])].filter((asset) => !known.has(asset.id)),
+  ]
+
   return {
     project: {
       ...project,
       nodes,
+      assets,
       overrides,
       meta: { ...project.meta, updatedAt: new Date().toISOString() },
     },
     changes,
     files,
     unresolved,
+    textures: filled,
   }
 }

@@ -2,17 +2,21 @@
  * Generic custom entity.
  *
  * One kind covers the whole spread — a wandering NPC, a static prop mob, a
- * flying pest — because the behaviour is assembled from toggles rather than
- * hardcoded per creature. The farming batch uses three sets of values on top of
- * this: a farmer (biped, wanders, passive), a scarecrow (post, stationary,
- * declares a family others react to) and a crow (bird, flies, avoids that
- * family, eats crop blocks).
+ * flying pest, a companion that follows you home — because the behaviour is
+ * assembled from toggles rather than hardcoded per creature. The farming batch
+ * uses three sets of values on top of this: a farmer (biped, wanders, passive),
+ * a scarecrow (post, stationary, declares a family others react to) and a crow
+ * (bird, flies, avoids that family, eats crop blocks). The companion preset uses
+ * a fourth: tameable, follows its owner, sits on command, and wears whichever of
+ * its faces suits what is happening to it.
  *
  * Entity AI is still fully data-driven in Bedrock, so none of this needs a
- * script — which is what keeps it cheap on low-end devices.
+ * script — which is what keeps it cheap on low-end devices. The expressions are
+ * the same bet: they run entirely in the render controller, so a mob that blinks
+ * and reacts costs the server exactly nothing.
  */
 
-import type { ContentKind } from '../registry/types'
+import type { ContentKind, TextureSlot } from '../registry/types'
 import type { VirtualFile } from '../vfs/types'
 import { BP, RP } from '../generators/emit'
 import {
@@ -20,9 +24,16 @@ import {
   buildGeometryJson,
   geometryUvRegions,
   getBodyPreset,
+  variantGroups,
 } from '../generators/geometry'
+import { buildVariantSelectors } from '../generators/expressions'
 import { buildAnimations, wrapAnimations, wrapControllers } from '../generators/entityAnim'
 import { bool, compact, list, num, str } from './shared'
+
+/** Does the chosen body carry a set of alternative faces? */
+function hasFaces(data: Record<string, unknown>): boolean {
+  return variantGroups(getBodyPreset(str(data, 'bodyPreset', 'biped'))).has('face')
+}
 
 export const entityKind: ContentKind = {
   id: 'entity',
@@ -135,6 +146,11 @@ export const entityKind: ContentKind = {
       group: 'Behaviour',
       options: [
         { value: 'passive', label: 'Passive', hint: 'Wanders, ignores the player' },
+        {
+          value: 'companion',
+          label: 'Companion',
+          hint: 'Tame it, and it follows you, sits when told and fights for you',
+        },
         { value: 'skittish', label: 'Skittish', hint: 'Wanders and panics when hurt' },
         { value: 'stationary', label: 'Stationary', hint: 'Never moves — props, scarecrows, totems' },
         { value: 'hostile', label: 'Hostile', hint: 'Hunts and attacks the player' },
@@ -169,6 +185,79 @@ export const entityKind: ContentKind = {
       type: 'boolean',
       group: 'Behaviour',
       help: 'Leave on for ambient pests so they do not accumulate.',
+    },
+
+    // -- companion ------------------------------------------------------------
+    {
+      key: 'tameItems',
+      label: 'Tamed with',
+      type: 'string-list',
+      group: 'Companion',
+      when: (data) => str(data, 'temperament') === 'companion',
+      help: 'Item identifiers a player can offer. Holding one also makes the entity follow them before it is tamed.',
+    },
+    {
+      key: 'followDistance',
+      label: 'Follows within',
+      type: 'slider',
+      group: 'Companion',
+      min: 2,
+      max: 24,
+      step: 1,
+      unit: 'blocks',
+      when: (data) => str(data, 'temperament') === 'companion',
+      help: 'How far it may drift before it comes back to its owner.',
+    },
+    {
+      key: 'canSit',
+      label: 'Sits when told',
+      type: 'boolean',
+      group: 'Companion',
+      when: (data) => str(data, 'temperament') === 'companion',
+      help: 'Interacting toggles sitting, the way a tamed wolf does. The body preset supplies the pose.',
+    },
+    {
+      key: 'defendsOwner',
+      label: 'Defends its owner',
+      type: 'boolean',
+      group: 'Companion',
+      when: (data) => str(data, 'temperament') === 'companion',
+      help: 'Attacks whatever attacks its owner, and whatever its owner attacks.',
+    },
+    {
+      key: 'canBeLeashed',
+      label: 'Can be leashed',
+      type: 'boolean',
+      group: 'Companion',
+      when: (data) => str(data, 'temperament') === 'companion',
+    },
+    {
+      key: 'healItems',
+      label: 'Healed by',
+      type: 'string-list',
+      group: 'Companion',
+      when: (data) => str(data, 'temperament') === 'companion',
+      help: 'Items that restore health when fed. Leave empty for a companion that cannot be healed.',
+    },
+    {
+      key: 'healAmount',
+      label: 'Health per feed',
+      type: 'number',
+      group: 'Companion',
+      min: 1,
+      step: 1,
+      when: (data) =>
+        str(data, 'temperament') === 'companion' && list(data, 'healItems').length > 0,
+    },
+
+    // -- expressions ----------------------------------------------------------
+    {
+      key: 'expressive',
+      label: 'Reacts with its face',
+      type: 'boolean',
+      group: 'Expressions',
+      when: (data) => hasFaces(data),
+      help: 'Blinks, winces when hurt, beams while walking and dozes when sitting. Costs nothing per tick — the face is picked in the render controller.',
     },
 
     // -- avoidance (the scarecrow mechanic, expressed generically) ------------
@@ -329,20 +418,36 @@ export const entityKind: ContentKind = {
     },
   ],
 
-  textureSlots: (node) => [
-    {
-      key: 'main',
-      label: 'Skin',
-      target: 'entity',
-      required: true,
-      recommended: getBodyPreset(str(node.data, 'bodyPreset', 'biped')).textureWidth,
-      help: 'Must match the UV layout of the chosen body preset.',
-      // Lets the pixel editor lay the body preset's UV map over the canvas
-      // instead of offering a blank square.
-      uvTemplate: (current) =>
-        geometryUvRegions(getBodyPreset(str(current.data, 'bodyPreset', 'biped'))),
-    },
-  ],
+  textureSlots: (node) => {
+    const slots: TextureSlot[] = [
+      {
+        key: 'main',
+        label: 'Skin',
+        target: 'entity',
+        required: true,
+        recommended: getBodyPreset(str(node.data, 'bodyPreset', 'biped')).textureWidth,
+        help: 'Must match the UV layout of the chosen body preset. A sheet at a whole multiple of that size works too, and gives you a higher-resolution character.',
+        // Lets the pixel editor lay the body preset's UV map over the canvas
+        // instead of offering a blank square.
+        uvTemplate: (current) =>
+          geometryUvRegions(getBodyPreset(str(current.data, 'bodyPreset', 'biped'))),
+      },
+    ]
+
+    // A painted egg beats two tint colours for anything with a face. The slot
+    // only appears once the entity actually has a spawn egg.
+    if (bool(node.data, 'hasSpawnEgg', true)) {
+      slots.push({
+        key: 'spawn_egg',
+        label: 'Spawn egg icon',
+        target: 'item',
+        recommended: 16,
+        help: 'Optional. Without one, the egg is tinted from the two colours above.',
+      })
+    }
+
+    return slots
+  },
 
   defaults: () => ({
     families: ['mob'],
@@ -357,6 +462,14 @@ export const entityKind: ContentKind = {
     collisionWidth: 0.6,
     collisionHeight: 1.8,
     temperament: 'passive',
+    tameItems: [],
+    followDistance: 8,
+    canSit: true,
+    defendsOwner: true,
+    canBeLeashed: true,
+    healItems: [],
+    healAmount: 4,
+    expressive: true,
     canFly: false,
     attackDamage: 2,
     tempted: [],
@@ -470,6 +583,89 @@ export const entityKind: ContentKind = {
       components['minecraft:behavior.random_look_around'] = { priority: 9 }
     }
 
+    // -- companion ------------------------------------------------------------
+    //
+    // A companion is two entities in one file: an untamed one that follows
+    // whoever is holding the right item, and a tamed one that follows its owner
+    // and does as it is told. Bedrock models that with a component group the
+    // taming event adds, which is why the interesting half of the behaviour
+    // lives outside `components`.
+    const componentGroups: Record<string, unknown> = {}
+    const events: Record<string, unknown> = { [`${ctx.namespace}:ate_block`]: {} }
+    const companion = temperament === 'companion' && !stationary
+    const tamedGroup = `${ctx.namespace}:tamed`
+    const sitting = companion && bool(data, 'canSit', true)
+
+    if (companion) {
+      const tameItems = list(data, 'tameItems')
+      const follow = num(data, 'followDistance', 8)
+
+      if (tameItems.length === 0) {
+        ctx.warn(
+          `Companion "${node.displayName}" has no taming items, so nothing can ever tame it.`,
+        )
+      }
+
+      components['minecraft:tameable'] = {
+        probability: 1,
+        tame_items: tameItems,
+        tame_event: { event: `${ctx.namespace}:on_tame`, target: 'self' },
+      }
+      // Untamed, it still has a survival instinct and remembers who hit it.
+      components['minecraft:behavior.panic'] = { priority: 1, speed_multiplier: 1.25 }
+      components['minecraft:behavior.hurt_by_target'] = { priority: 2 }
+
+      const tamed: Record<string, unknown> = {
+        'minecraft:is_tamed': {},
+        'minecraft:persistent': {},
+        'minecraft:behavior.follow_owner': {
+          priority: 4,
+          speed_multiplier: 1.2,
+          start_distance: follow,
+          stop_distance: Math.max(1, Math.round(follow / 4)),
+        },
+      }
+
+      if (sitting) {
+        tamed['minecraft:sittable'] = {}
+        tamed['minecraft:behavior.stay_while_sitting'] = { priority: 3 }
+      }
+
+      if (bool(data, 'defendsOwner', true)) {
+        tamed['minecraft:attack'] = { damage: Math.max(1, Math.round(num(data, 'attackDamage', 3))) }
+        tamed['minecraft:behavior.owner_hurt_by_target'] = { priority: 1 }
+        tamed['minecraft:behavior.owner_hurt_target'] = { priority: 2 }
+        tamed['minecraft:behavior.melee_attack'] = { priority: 5, speed_multiplier: 1.25 }
+      }
+
+      if (bool(data, 'canBeLeashed', true)) {
+        components['minecraft:leashable'] = { soft_distance: 4, hard_distance: 6, max_distance: 10 }
+      }
+
+      const healItems = list(data, 'healItems')
+      if (healItems.length > 0) {
+        tamed['minecraft:interact'] = {
+          interactions: healItems.map((item) => ({
+            on_interact: {
+              filters: {
+                all_of: [
+                  { test: 'is_family', subject: 'other', value: 'player' },
+                  { test: 'has_equipment', subject: 'other', domain: 'hand', value: item },
+                  { test: 'is_owner', subject: 'other' },
+                ],
+              },
+            },
+            use_item: true,
+            heal_amount: Math.round(num(data, 'healAmount', 4)),
+            particle_on_start: { particle_type: 'heart', particle_y_offset: 1 },
+          })),
+        }
+      }
+
+      componentGroups[tamedGroup] = tamed
+      events[`${ctx.namespace}:on_tame`] = { add: { component_groups: [tamedGroup] } }
+    }
+
     if (temperament === 'skittish' && !stationary) {
       components['minecraft:behavior.panic'] = { priority: 1, speed_multiplier: 1.4 }
       components['minecraft:behavior.hurt_by_target'] = { priority: 2 }
@@ -491,7 +687,7 @@ export const entityKind: ContentKind = {
       }
     }
 
-    const tempted = list(data, 'tempted')
+    const tempted = [...new Set([...list(data, 'tempted'), ...(companion ? list(data, 'tameItems') : [])])]
     if (tempted.length > 0 && !stationary) {
       components['minecraft:behavior.tempt'] = {
         priority: 4,
@@ -560,17 +756,31 @@ export const entityKind: ContentKind = {
           is_spawnable: bool(data, 'hasSpawnEgg', true),
           is_summonable: bool(data, 'isSummonable', true),
         }),
-        component_groups: {},
+        component_groups: componentGroups,
         components,
-        events: {
-          [`${ctx.namespace}:ate_block`]: {},
-        },
+        events,
       },
     }
 
     // -- resource pack --------------------------------------------------------
 
-    const anim = buildAnimations(flat, bodySpec, flying)
+    const anim = buildAnimations(flat, bodySpec, { flying, sittable: sitting })
+
+    // Alternative bones — a set of faces — become one Molang variable and a
+    // `part_visibility` block. Nothing about this is specific to faces: any
+    // body that declares a variant group gets the same treatment.
+    const selectors = bool(data, 'expressive', true) ? buildVariantSelectors(bodySpec, node.name) : []
+    const partVisibility =
+      selectors.length > 0
+        ? [
+            { '*': true },
+            ...selectors.flatMap((selector) =>
+              Object.entries(selector.visibility).map(([bone, when]) => ({ [bone]: when })),
+            ),
+          ]
+        : undefined
+
+    const eggTexture = bool(data, 'hasSpawnEgg', true) ? ctx.texture(node, 'spawn_egg') : null
 
     const clientEntity = {
       format_version: target.formats.clientEntity,
@@ -581,13 +791,24 @@ export const entityKind: ContentKind = {
           textures: { default: texturePath ?? 'textures/entity/missing' },
           geometry: { default: geometryId },
           animations: anim.clientAnimations,
-          scripts: { animate: ['general'] },
+          scripts: compact({
+            // `pre_animation` is the only per-frame Molang hook a resource pack
+            // has, which is what makes an expression system possible without a
+            // behaviour script running every tick.
+            initialize:
+              selectors.length > 0 ? selectors.map((s) => `${s.variable} = 0;`) : undefined,
+            pre_animation:
+              selectors.length > 0 ? selectors.map((selector) => selector.statement) : undefined,
+            animate: ['general'],
+          }),
           render_controllers: [`controller.render.${flat}`],
           spawn_egg: bool(data, 'hasSpawnEgg', true)
-            ? {
-                base_colour: str(data, 'eggBaseColor', '#8a7d5c'),
-                overlay_colour: str(data, 'eggOverlayColor', '#3d3226'),
-              }
+            ? eggTexture
+              ? { texture: eggTexture, texture_index: 0 }
+              : {
+                  base_colour: str(data, 'eggBaseColor', '#8a7d5c'),
+                  overlay_colour: str(data, 'eggOverlayColor', '#3d3226'),
+                }
             : undefined,
         }),
       },
@@ -596,11 +817,12 @@ export const entityKind: ContentKind = {
     const renderController = {
       format_version: target.formats.renderController,
       render_controllers: {
-        [`controller.render.${flat}`]: {
+        [`controller.render.${flat}`]: compact({
           geometry: 'Geometry.default',
           materials: [{ '*': 'Material.default' }],
           textures: ['Texture.default'],
-        },
+          part_visibility: partVisibility,
+        }),
       },
     }
 

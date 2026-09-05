@@ -13,7 +13,7 @@ import { useModalA11y } from '../ui/useModalA11y'
 import { allKinds, getKind } from '../../core/registry/types'
 import { useProject } from '../../state/project'
 import { useUi, type SideView } from '../../state/ui'
-import { BUILTIN_PRESET_PACKS } from '../../presets/farming'
+import { BUILTIN_PRESET_PACKS } from '../../presets'
 
 /** Shared cmdk group-heading styling, kept in one place rather than per group. */
 const GROUP_CLASS = [
@@ -168,13 +168,23 @@ export function CommandPalette() {
                         key={preset.id}
                         value={`apply preset ${preset.label} ${preset.description ?? ''}`}
                         onSelect={() => {
-                          const report = applyPresetFile(preset)
-                          toast({
-                            tone: 'success',
-                            title: `Applied ${preset.label}`,
-                            detail: `${report.changes.length} pieces of content`,
-                          })
                           close()
+                          void applyPresetFile(preset).then(
+                            (report) => {
+                              toast({
+                                tone: 'success',
+                                title: `Applied ${preset.label}`,
+                                detail: `${report.changes.length} pieces of content`,
+                              })
+                            },
+                            (failure: unknown) => {
+                              toast({
+                                tone: 'error',
+                                title: `Could not apply ${preset.label}`,
+                                detail: failure instanceof Error ? failure.message : String(failure),
+                              })
+                            },
+                          )
                         }}
                       >
                         <Plus size={14} aria-hidden="true" className="text-ink-300" />

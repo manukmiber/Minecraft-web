@@ -29,6 +29,35 @@ export interface PresetNode {
   notes?: string
 }
 
+/**
+ * A texture a preset arrives with.
+ *
+ * Presets describe behaviour and normally leave the PNGs to you — but a preset
+ * whose whole point is a character is useless without its artwork, so one may
+ * carry its own. The bytes are never inline in the model: a built-in preset
+ * points at a file the app ships, and a hand-written one may inline base64 for
+ * something small. Either way the bytes go through the ordinary asset store, so
+ * a preset texture is indistinguishable from a dropped one the moment it lands.
+ */
+export interface PresetAsset {
+  /** Which node it belongs to, as `kind:name` — the same shape a ref uses. */
+  node: string
+  /** Texture slot key on that node. */
+  slot: string
+  fileName: string
+  width: number
+  height: number
+  /** Path relative to the app's base URL. Mutually exclusive with `base64`. */
+  url?: string
+  /** Raw PNG bytes, base64, for a preset that has to be self-contained. */
+  base64?: string
+}
+
+/** Identifies one binding in the map handed to `applyPreset`. */
+export function presetAssetKey(node: string, slot: string): string {
+  return `${node}|${slot}`
+}
+
 export interface PresetFile {
   presetFormat: number
   id: string
@@ -40,6 +69,8 @@ export interface PresetFile {
   targetProfileId?: string
   /** Content to create. An existing node with the same kind+name is replaced. */
   nodes: PresetNode[]
+  /** Artwork shipped with the preset, bound to a node's texture slot. */
+  assets?: PresetAsset[]
   /**
    * Raw files written straight into the project's overrides, for anything the
    * kinds cannot express yet. Paths are pack-relative, e.g.
@@ -96,6 +127,42 @@ export function validatePreset(raw: unknown, knownKinds: Set<string>): PresetVal
         warnings.push(`${where} has no displayName; the identifier name will be used instead.`)
       }
     })
+  }
+
+  if (preset.assets) {
+    if (!Array.isArray(preset.assets)) {
+      errors.push('"assets" must be an array.')
+    } else {
+      const declared = new Set(
+        (Array.isArray(preset.nodes) ? preset.nodes : []).map((node) => `${node?.kind}:${node?.name}`),
+      )
+      preset.assets.forEach((asset, index) => {
+        const where = `assets[${index}]`
+        if (!asset || typeof asset !== 'object') {
+          errors.push(`${where} is not an object.`)
+          return
+        }
+        if (typeof asset.node !== 'string' || typeof asset.slot !== 'string') {
+          errors.push(`${where} needs a string "node" and "slot".`)
+          return
+        }
+        // A texture bound to a node the preset does not create would silently
+        // do nothing, which is worse than refusing the file.
+        if (!declared.has(asset.node)) {
+          errors.push(`${where} is bound to "${asset.node}", which this preset does not create.`)
+        }
+        const hasUrl = typeof asset.url === 'string' && asset.url !== ''
+        const hasBase64 = typeof asset.base64 === 'string' && asset.base64 !== ''
+        if (hasUrl === hasBase64) {
+          errors.push(`${where} needs exactly one of "url" or "base64".`)
+        }
+        // An absolute URL would let a preset from the inbox pull bytes off any
+        // host it likes the moment somebody presses Apply.
+        if (hasUrl && !/^textures\//.test(asset.url!)) {
+          errors.push(`${where}.url must be a path under "textures/".`)
+        }
+      })
+    }
   }
 
   if (preset.files) {

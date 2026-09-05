@@ -9,6 +9,52 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Characters, and Kohane.** The entity kind grew from "a mob" into "a
+  character": a detailed companion body, a tameable temperament, facial
+  expressions, and a painted spawn egg. The first one ships as a preset in the
+  Presets panel.
+  - **A companion body.** Thirty-one units tall, with layered hair — a fringe
+    cut out of the hair shell so the face shows through, side locks, twin tails
+    in two segments each and a cowlick — an open jacket over a shirt, a skirt in
+    four panels, and high-top boots. Forty cubes, none of them hand-placed: a
+    body is now authored as a *draft* and `packBody` shelf-packs it onto the
+    sheet, so moving a cube never means re-deriving somebody else's UV origin.
+  - **Eight facial expressions, at no server cost.** The faces are alternative
+    bones in a *variant group*; one Molang statement in `scripts.pre_animation`
+    picks between them and the render controller's `part_visibility` hides the
+    rest. She blinks about every 4.6 seconds, winces when hurt, grins while
+    walking, opens her mouth when running and dozes when sitting. Nothing runs
+    on the server, and nothing runs when nobody is looking. Any body that
+    declares a variant group gets the same treatment.
+  - **A companion temperament.** Tame it with an item and a component group adds
+    following, sitting, owner defence and feeding — the same split a vanilla wolf
+    uses, so an untamed one behaves sensibly instead of trailing the first
+    player it sees. New fields: tamed with, follows within, sits when told,
+    defends its owner, can be leashed, healed by, health per feed.
+  - **Animations that read the body.** Hair that lags behind the head instead of
+    swinging with it, a skirt whose panels drift when still and swing when
+    walking, a sitting pose, and idle arm drift. Every clause is conditional on
+    the bone existing, so a new body gets what fits it without the generator
+    learning its name.
+  - **Painted spawn eggs.** `spawn_egg` is a new optional texture slot on any
+    entity that has an egg; fill it and the client entity references the icon
+    instead of tinting the vanilla egg from two colours.
+  - **The artwork is generated.** `src/core/generators/skin/` paints the sheet in
+    model units against the body spec, so the geometry and the texture cannot
+    drift apart. `node scripts/make-companion.mjs` writes it — 512px over a
+    128-unit body, four times vanilla resolution — and `--scale 1` renders the
+    same character chunky. `node scripts/render-companion.mjs` regenerates the
+    pictures in the docs from the model itself.
+
+- **Presets can carry their own artwork.** A preset that describes a character
+  is not much use without one, so `assets` binds PNGs to texture slots on the
+  nodes it creates. The bytes go through the same asset store a dropped file
+  does — validated, cached, uploaded, listed on the project — so a preset
+  texture is editable in the pixel editor from the moment it lands. A `url` must
+  be a path under `textures/` served by the app, because a preset from the inbox
+  is untrusted input; anything else inlines `base64`. A texture that fails to
+  load leaves its slot empty and is reported, rather than failing the apply.
+
 - **Vanilla artwork, from Faithful 32x.** Every `minecraft:` identifier the app
   offers is drawn with its real texture instead of a monogram or a hashed
   colour — in the item browser, in recipe slots, on the structure painter's
@@ -57,6 +103,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Applying a preset is now asynchronous, because a preset may arrive with
+  artwork to fetch. The Apply button says so while it works, and the toast
+  reports how many textures came with it.
+- Built-in presets are grouped into packs in `src/presets/index.ts` rather than
+  in the farming batch, so the Presets panel has a section per theme.
 - `format_version` entries for biomes, features, feature rules, client biomes
   and fog definitions are declared in the target profiles alongside every other
   version, so a future Bedrock release stays a profile change.

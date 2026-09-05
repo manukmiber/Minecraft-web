@@ -6,15 +6,19 @@
  * or replaced.
  */
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Layers, Plus } from 'lucide-react'
 
 import { Badge, Button, cn } from '../../app/ui/primitives'
-import { BUILTIN_PRESET_PACKS } from '../../presets/farming'
+import { BUILTIN_PRESET_PACKS } from '../../presets'
 import { useProject } from '../../state/project'
 
 export function PresetLibrary() {
   const { project, applyPresetFile, toast } = useProject()
+  // A preset that ships artwork has to fetch it, so applying is no longer
+  // instantaneous and the button says so.
+  const [applying, setApplying] = useState<string | null>(null)
   const appliedIds = new Set(project.nodes.map((n) => n.presetId).filter(Boolean) as string[])
 
   return (
@@ -71,21 +75,39 @@ export function PresetLibrary() {
                       size="sm"
                       variant={applied ? 'subtle' : 'primary'}
                       icon={<Plus size={12} />}
-                      onClick={() => {
-                        const report = applyPresetFile(preset)
-                        const created = report.changes.filter((c) => c.action === 'created').length
-                        const replaced = report.changes.length - created
-                        toast({
-                          tone: report.unresolved.length > 0 ? 'warning' : 'success',
-                          title: `Applied ${preset.label}`,
-                          detail:
-                            report.unresolved.length > 0
-                              ? `${created} created, ${replaced} replaced. Unresolved references: ${report.unresolved.join(', ')}`
-                              : `${created} created, ${replaced} replaced`,
-                        })
+                      disabled={applying === preset.id}
+                      onClick={async () => {
+                        setApplying(preset.id)
+                        try {
+                          const report = await applyPresetFile(preset)
+                          const created = report.changes.filter((c) => c.action === 'created').length
+                          const replaced = report.changes.length - created
+                          const problems = [...report.unresolved, ...report.textureFailures]
+                          const counted = `${created} created, ${replaced} replaced`
+                          toast({
+                            tone: problems.length > 0 ? 'warning' : 'success',
+                            title: `Applied ${preset.label}`,
+                            detail:
+                              problems.length > 0
+                                ? `${counted}. Unresolved: ${problems.join(', ')}`
+                                : report.textures.length > 0
+                                  ? `${counted}, ${report.textures.length} textures included`
+                                  : counted,
+                          })
+                        } catch (failure) {
+                          toast({
+                            tone: 'error',
+                            title: `Could not apply ${preset.label}`,
+                            detail: failure instanceof Error ? failure.message : String(failure),
+                          })
+                        } finally {
+                          setApplying(null)
+                        }
                       }}
                     >
-                      {applied ? 'Re-apply' : 'Apply'}
+                      <span className="whitespace-nowrap">
+                        {applying === preset.id ? 'Applying…' : applied ? 'Re-apply' : 'Apply'}
+                      </span>
                     </Button>
                     <span className="text-xs text-ink-300">
                       {preset.nodes.length} pieces of content

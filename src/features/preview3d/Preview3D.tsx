@@ -444,30 +444,74 @@ function EntityPreview({ node, slot }: { node: ContentNode; slot: string }) {
   )
   useEffect(() => () => material.dispose(), [material])
 
-  const group = useMemo(() => buildEntityGroup(spec, material), [spec, material])
+  const built = useMemo(() => buildEntityGroup(spec, material), [spec, material])
   useEffect(
     () => () => {
-      group.traverse((child) => {
+      built.root.traverse((child) => {
         if (child instanceof THREE.Mesh) child.geometry.dispose()
       })
     },
-    [group],
+    [built],
   )
 
   return (
     <Spin>
-      <primitive object={group} scale={scale} />
+      <VariantCycle variants={built.variants} />
+      <primitive object={built.root} scale={scale} />
     </Spin>
   )
+}
+
+/**
+ * Shows one bone of each variant group at a time, changing every couple of
+ * seconds.
+ *
+ * In game the choice comes from a Molang expression reading what the mob is
+ * doing; there is nothing to read in a preview, so it simply cycles. That turns
+ * a static bust into the answer to "what do all eight faces actually look like",
+ * which is the question you have when you are drawing them.
+ */
+function VariantCycle({ variants }: { variants: Map<string, THREE.Group[]> }) {
+  const elapsed = useRef(0)
+
+  useEffect(() => {
+    // Start on the first variant so the preview is not blank before the first
+    // frame lands.
+    for (const groups of variants.values()) {
+      groups.forEach((group, index) => {
+        group.visible = index === 0
+      })
+    }
+  }, [variants])
+
+  useFrame((_, delta) => {
+    if (variants.size === 0) return
+    elapsed.current += delta
+    for (const groups of variants.values()) {
+      const index = Math.floor(elapsed.current / 1.6) % groups.length
+      groups.forEach((group, at) => {
+        group.visible = at === index
+      })
+    }
+  })
+
+  return null
+}
+
+interface BuiltEntity {
+  root: THREE.Group
+  /** Variant group name -> the bone groups in it, in declaration order. */
+  variants: Map<string, THREE.Group[]>
 }
 
 /**
  * Builds the entity from the same bone spec the generator writes, honouring the
  * bone hierarchy and pivots so a rotated bone lands where the game would put it.
  */
-function buildEntityGroup(spec: GeometrySpec, material: THREE.Material): THREE.Group {
+function buildEntityGroup(spec: GeometrySpec, material: THREE.Material): BuiltEntity {
   const root = new THREE.Group()
   const bones = new Map<string, THREE.Group>()
+  const variants = new Map<string, THREE.Group[]>()
 
   const attach = (bone: BoneSpec): THREE.Group => {
     const existing = bones.get(bone.name)
@@ -490,7 +534,14 @@ function buildEntityGroup(spec: GeometrySpec, material: THREE.Material): THREE.G
         cube.size[1] + inflate * 2,
         cube.size[2] + inflate * 2,
       ]
-      const geometry = new THREE.BoxGeometry(size[0] * UNIT, size[1] * UNIT, size[2] * UNIT)
+      // A zero-thickness cube is a legitimate Bedrock plane; BoxGeometry needs
+      // something non-zero to build from, so it gets the thinnest slab that
+      // still renders.
+      const geometry = new THREE.BoxGeometry(
+        Math.max(size[0], 0.0001) * UNIT,
+        Math.max(size[1], 0.0001) * UNIT,
+        Math.max(size[2], 0.0001) * UNIT,
+      )
       applyBoxUv(geometry, {
         u: cube.uv[0],
         v: cube.uv[1],
@@ -503,18 +554,44 @@ function buildEntityGroup(spec: GeometrySpec, material: THREE.Material): THREE.G
       })
 
       const mesh = new THREE.Mesh(geometry, material)
-      // Cube origin is its minimum corner; three.js centres its geometry, and
-      // the cube is positioned relative to its bone's pivot.
-      mesh.position.set(
-        (cube.origin[0] - inflate + size[0] / 2 - bone.pivot[0]) * UNIT,
-        (cube.origin[1] - inflate + size[1] / 2 - bone.pivot[1]) * UNIT,
-        (cube.origin[2] - inflate + size[2] / 2 - bone.pivot[2]) * UNIT,
-      )
       mesh.castShadow = true
-      group.add(mesh)
+
+      // Cube origin is its minimum corner; three.js centres its geometry, and
+      // the cube is positioned relative to whichever pivot it turns about —
+      // its own when it has a rotation, otherwise its bone's.
+      const pivot = cube.rotation ? (cube.pivot ?? bone.pivot) : bone.pivot
+      mesh.position.set(
+        (cube.origin[0] - inflate + size[0] / 2 - pivot[0]) * UNIT,
+        (cube.origin[1] - inflate + size[1] / 2 - pivot[1]) * UNIT,
+        (cube.origin[2] - inflate + size[2] / 2 - pivot[2]) * UNIT,
+      )
+
+      if (cube.rotation) {
+        const hinge = new THREE.Group()
+        hinge.position.set(
+          (pivot[0] - bone.pivot[0]) * UNIT,
+          (pivot[1] - bone.pivot[1]) * UNIT,
+          (pivot[2] - bone.pivot[2]) * UNIT,
+        )
+        hinge.rotation.set(
+          THREE.MathUtils.degToRad(cube.rotation[0]),
+          THREE.MathUtils.degToRad(cube.rotation[1]),
+          THREE.MathUtils.degToRad(cube.rotation[2]),
+        )
+        hinge.add(mesh)
+        group.add(hinge)
+      } else {
+        group.add(mesh)
+      }
     }
 
     bones.set(bone.name, group)
+
+    if (bone.variant) {
+      const siblings = variants.get(bone.variant.group) ?? []
+      siblings.push(group)
+      variants.set(bone.variant.group, siblings)
+    }
 
     const parentSpec = bone.parent ? spec.bones.find((b) => b.name === bone.parent) : undefined
     if (parentSpec) {
@@ -534,7 +611,7 @@ function buildEntityGroup(spec: GeometrySpec, material: THREE.Material): THREE.G
   }
 
   for (const bone of spec.bones) attach(bone)
-  return root
+  return { root, variants }
 }
 
 /** A slow turntable so a model can be read without touching the mouse. */
