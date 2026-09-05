@@ -5,7 +5,7 @@
  * in model units, so the sheet is a *description* of the character rather than a
  * PNG somebody has to open in an editor to change. Widen the fringe, move the
  * blush, restyle the jacket — it is all in this file, and re-running
- * `node scripts/make-companion.mjs` re-renders it at any resolution.
+ * `node scripts/make-character.mjs` re-renders it at any resolution.
  *
  * The palette is read off a reference sheet for the character: pale champagne
  * hair with warm shadows, amber eyes, and a denim-and-pink stage outfit over a

@@ -1,10 +1,14 @@
-# Companions
+# Characters
+
+> This is about characters **in the game** — mobs your add-on ships. The mascot
+> that stands in the corner of the workspace is a different thing entirely; that
+> one is [COMPANION.md](./COMPANION.md).
 
 A companion is an ordinary entity with three things turned on: the **Companion**
 body, the **Companion** temperament, and a face. This page is about how each of
 those works, and how to make one that is not Kohane.
 
-![Kohane, seen from four sides](images/companion-turntable.png)
+![Kohane, seen from four sides](images/kohane-turntable.png)
 
 ---
 
@@ -77,7 +81,7 @@ first player it sees.
 
 ## The face
 
-![The eight expressions](images/companion-expressions.png)
+![The eight expressions](images/kohane-expressions.png)
 
 Eight zero-thickness planes sit in the same place in front of the head, each
 tagged as a *variant*:
@@ -144,9 +148,9 @@ geometry uses. That is what keeps the artwork attached to the model: move the
 cube, and its paint follows.
 
 ```bash
-node scripts/make-companion.mjs             # 512px sheet + spawn egg icon
-node scripts/make-companion.mjs --scale 1   # 128px, vanilla resolution
-node scripts/render-companion.mjs           # the pictures on this page
+node scripts/make-character.mjs             # 512px sheet + spawn egg icon
+node scripts/make-character.mjs --scale 1   # 128px, vanilla resolution
+node scripts/render-character.mjs           # the pictures on this page
 ```
 
 Both are deterministic — a re-run with no source change leaves the working tree
@@ -184,7 +188,7 @@ assets: [
     node: 'entity:yourcharacter',
     slot: 'main',
     fileName: 'yourcharacter.png',
-    url: 'textures/companion/yourcharacter/skin.png',
+    url: 'textures/characters/yourcharacter/skin.png',
     width: 512,
     height: 512,
   },

@@ -9,10 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Characters, and Kohane.** The entity kind grew from "a mob" into "a
-  character": a detailed companion body, a tameable temperament, facial
+- **Characters in the game, and Kohane.** The entity kind grew from "a mob" into
+  "a character": a detailed companion body, a tameable temperament, facial
   expressions, and a painted spawn egg. The first one ships as a preset in the
-  Presets panel.
+  Presets panel, and ends up in the exported add-on. (Distinct from the
+  workspace companion below, which is a mascot inside the app.)
   - **A companion body.** Thirty-one units tall, with layered hair — a fringe
     cut out of the hair shell so the face shows through, side locks, twin tails
     in two segments each and a cowlick — an open jacket over a shirt, a skirt in
@@ -41,9 +42,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     instead of tinting the vanilla egg from two colours.
   - **The artwork is generated.** `src/core/generators/skin/` paints the sheet in
     model units against the body spec, so the geometry and the texture cannot
-    drift apart. `node scripts/make-companion.mjs` writes it — 512px over a
+    drift apart. `node scripts/make-character.mjs` writes it — 512px over a
     128-unit body, four times vanilla resolution — and `--scale 1` renders the
-    same character chunky. `node scripts/render-companion.mjs` regenerates the
+    same character chunky. `node scripts/render-character.mjs` regenerates the
     pictures in the docs from the model itself.
 
 - **Presets can carry their own artwork.** A preset that describes a character
@@ -54,6 +55,44 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   be a path under `textures/` served by the app, because a preset from the inbox
   is untrusted input; anything else inlines `base64`. A texture that fails to
   load leaves its slot empty and is reported, rather than failing the apply.
+- **A workspace companion.** Drop an MMD model into the new **Companion** panel
+  and a character stands in the corner of the workspace, reacting to what you
+  build.
+  - **A PMX reader written from scratch** (`src/core/companion/pmx.ts`), because
+    three.js removed `MMDLoader` in r167 and there is no addon left to lean on.
+    PMX 2.0 and 2.1, both text encodings, every index width, and every weight
+    scheme (BDEF1/2/4, SDEF, QDEF) flattened onto four influences. Unit tested
+    against files the tests build byte by byte, since a real model cannot be
+    committed.
+  - **Rendered the way MMD renders it.** The model's own toon ramps are rebuilt
+    as three.js gradient maps in full colour rather than the red channel three
+    reads by default; `.spa` and `.sph` sphere maps are injected after lighting;
+    and the inverted-hull outline is expanded in clip space, so the line weight
+    does not change with the size of the dock. Whether a material is opaque, cut
+    out or translucent is decided by measuring its texture's alpha, not by
+    guessing from the file name.
+  - **Procedural motion, no motion files.** A standing pose measured from the
+    model's own bind pose, breathing, weight shift, blinking, a head that
+    follows the pointer, vowel morphs while she talks, expressions composed from
+    whatever morphs the model has (matched in Japanese first), and hair and
+    skirt on spring bones worked out from the model's physics bodies. Gestures
+    fire from what the workspace just did.
+  - **She comments on the app, not instead of it.** Every line is about
+    something already reported by a toast or the Problems panel, so muting her
+    loses nothing. Three chatter levels; **Reduced motion** stills her; hiding
+    her unmounts the canvas and takes the GPU cost to zero.
+  - **A way to check your own model.** Mood and gesture chips in the panel, and
+    a report of which expression slots matched and which morph each one found —
+    so a model that never smiles can be diagnosed as a naming difference rather
+    than guessed at. Moods are weighted towards the eyes and mouth rather than
+    the eyebrows, because most models have a fringe and a fringe hides eyebrows.
+  - **Framing.** Head to toe, or head and shoulders for a much smaller corner.
+  - **The model never leaves the browser.** It is kept in IndexedDB and is never
+    pushed to R2, committed to the project repo or written into an export, and
+    `.gitignore` now refuses `.pmx`, `.pmd`, `.vmd` and `.vpd`. MMD models are
+    overwhelmingly distributed under terms that forbid redistribution, and a
+    copy in a repo or a bucket would be exactly that. See
+    [`docs/COMPANION.md`](docs/COMPANION.md).
 
 - **Vanilla artwork, from Faithful 32x.** Every `minecraft:` identifier the app
   offers is drawn with its real texture instead of a monogram or a hashed

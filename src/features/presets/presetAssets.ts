@@ -24,7 +24,7 @@ export interface PresetAssetResult {
   failures: string[]
 }
 
-/** `textures/companion/kohane/kohane.png` -> an app-relative URL. */
+/** `textures/characters/kohane/kohane.png` -> an app-relative URL. */
 function assetUrl(path: string): string {
   const base = import.meta.env.BASE_URL ?? '/'
   return `${base}${path}`

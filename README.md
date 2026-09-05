@@ -75,6 +75,12 @@ Bedrock 1.21.90 and Java 1.20.1.
   already in the repo, so two people exporting at once cannot collide.
 - **Preset inbox.** Anything another tool writes into `preset/` in the project
   repo appears in the app, ready to apply to the active save.
+- **A companion, if you want one.** Drop in an MMD model and it stands in the
+  corner of the workspace, breathing, blinking, following the pointer and
+  saying something about what you just built. The PMX reader is written from
+  scratch — three.js dropped `MMDLoader` — and the model never leaves your
+  browser. Nothing she says is load-bearing, and she can be switched off
+  entirely.
 
 ## Screens
 
@@ -138,7 +144,7 @@ shirt, a four-panel skirt that swings, boots — and the **Companion** temperame
 turns one into something you tame, that follows you, sits when told and fights
 beside you.
 
-![Kohane, seen from four sides](docs/images/companion-turntable.png)
+![Kohane, seen from four sides](docs/images/kohane-turntable.png)
 
 The first one ships as a preset: **Kohane**, in the Presets panel. Apply it and
 she arrives complete, artwork and all — a preset may now carry its own PNGs, so
@@ -148,7 +154,7 @@ a character is not an untextured mannequin waiting for you to draw one.
 
 Eight expressions, picked every frame from what is actually happening to her:
 
-![Kohane's eight expressions](docs/images/companion-expressions.png)
+![Kohane's eight expressions](docs/images/kohane-expressions.png)
 
 They are eight flat bones stacked in the same place, and one Molang expression in
 `scripts.pre_animation` decides which is visible through the render controller's
@@ -168,9 +174,9 @@ Her skin is not a PNG somebody drew and dropped in. It is painted by
 becomes the `.geo.json`:
 
 ```bash
-node scripts/make-companion.mjs           # the sheet and the spawn egg
-node scripts/make-companion.mjs --scale 1 # the same character at vanilla resolution
-node scripts/render-companion.mjs         # the pictures on this page
+node scripts/make-character.mjs           # the sheet and the spawn egg
+node scripts/make-character.mjs --scale 1 # the same character at vanilla resolution
+node scripts/render-character.mjs         # the pictures on this page
 ```
 
 Because a cube's texture patch is derived from where the packer put it, moving a
@@ -234,6 +240,36 @@ Textures by the Faithful Resource Pack team, used under the Faithful License —
 the full terms are in `public/textures/vanilla/LICENSE.txt`. They are a preview
 inside the builder only: the generators emit your own textures and nothing else,
 so no vanilla artwork is written into an exported `.mcaddon`.
+
+## The companion
+
+Optional, off until you give it a model, and worth the paragraph because of
+where the model goes.
+
+Open the **Companion** panel, drop in an MMD model — the `.zip` as downloaded,
+or the unpacked folder — and a character stands in the corner of the workspace.
+She has a standing pose worked out from the model's own bind pose, blinks,
+breathes, follows the pointer, moves her hair and skirt on spring bones derived
+from the model's physics bodies, and comments on what the workspace just did:
+content added, problems appearing and clearing, saves, exports, releases. How
+much she says is a setting, and **Reduced motion** stills her completely.
+
+The loader is ours: three.js removed `MMDLoader` in r167, so
+`src/core/companion/pmx.ts` reads PMX 2.0 and 2.1 directly — every weight
+scheme, the model's own toon ramps as gradient maps, sphere maps, the inverted-
+hull outline, and vertex morphs applied on the CPU against a sparse vertex list.
+
+**The model stays in your browser.** It is held in IndexedDB and is never
+uploaded to R2, committed to the project repo, or written into an export, and
+`.gitignore` refuses `.pmx` files as a second line of defence. That is a licence
+decision: MMD models are overwhelmingly distributed under terms that forbid
+redistribution, and a copy in a repo or a bucket is redistribution however
+private it feels. Those same terms often limit use to MMD and MMD-adjacent
+software and restrict where finished work may be posted — so read the readme
+that came with your model before you use it here. Only you can agree to it.
+
+[`docs/COMPANION.md`](docs/COMPANION.md) has the full support matrix, what the
+rig does, and what it deliberately does not.
 
 ## Two repositories
 
@@ -328,8 +364,10 @@ project to a published release in one pass.
 - [`docs/TUTORIAL.md`](docs/TUTORIAL.md) — **start here.** End to end: an item, a
   crop, a crafting station, recipes, world generation, and a release with six
   files attached.
-- [`docs/COMPANIONS.md`](docs/COMPANIONS.md) — the companion body, the
-  expression system, and how to paint a character of your own.
+- [`docs/CHARACTERS.md`](docs/CHARACTERS.md) — the in-game companion body, the
+  expression system, and how to paint a character of your own. (Not to be
+  confused with [`docs/COMPANION.md`](docs/COMPANION.md), which is the mascot
+  that stands in the corner of the workspace.)
 - [`docs/PLATFORMS.md`](docs/PLATFORMS.md) — Bedrock vs Java, the full support
   matrix, and why a Java data pack cannot add a block.
 - [`docs/CRAFTING_STATIONS.md`](docs/CRAFTING_STATIONS.md) — custom stations,
@@ -340,6 +378,8 @@ project to a published release in one pass.
   do, sorted by whether it is a platform limit, a gap, or deliberate.
 - [`docs/AI_ASSIST.md`](docs/AI_ASSIST.md) — hand this to Claude Code (or any
   other tool) when you want it to generate a preset the wizard cannot express.
+- [`docs/COMPANION.md`](docs/COMPANION.md) — the workspace companion: importing
+  a model, what the PMX loader supports, and where the model is kept.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the pieces fit together
   and why.
 - [`docs/SCHEMA.md`](docs/SCHEMA.md) — `project.json`, the preset format, and

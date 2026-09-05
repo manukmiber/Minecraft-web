@@ -12,14 +12,14 @@
  * PNG and the same preset file describes somebody else entirely.
  */
 
-import { COMPANION_TEXTURES } from '../../core/data/companionTextures'
+import { CHARACTER_TEXTURES } from '../../core/data/characterTextures'
 import { PRESET_FORMAT } from '../../core/presets/format'
 import type { PresetAsset, PresetFile } from '../../core/presets/format'
 
 const ENTITY = 'entity:kohane'
 
 /** The generated artwork, bound to the entity's texture slots. */
-const artwork: PresetAsset[] = COMPANION_TEXTURES.map((texture) => ({
+const artwork: PresetAsset[] = CHARACTER_TEXTURES.map((texture) => ({
   node: ENTITY,
   slot: texture.slot,
   fileName: texture.fileName,

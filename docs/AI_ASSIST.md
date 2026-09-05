@@ -103,7 +103,7 @@ A preset *may* carry artwork, through an optional `assets` array:
     "node": "entity:kohane",     // kind:name, of a node this preset creates
     "slot": "main",              // a texture slot that node declares
     "fileName": "kohane.png",
-    "url": "textures/companion/kohane/kohane.png",
+    "url": "textures/characters/kohane/kohane.png",
     "width": 512,
     "height": 512
   }
@@ -216,7 +216,7 @@ is on, an optional `spawn_egg` icon. Without one the egg is tinted from
 
 The `companion` body is a full character — layered hair, twin tails, a
 four-panel skirt, boots — and declares eight face variants, which is what
-`expressive` drives. See [COMPANIONS.md](./COMPANIONS.md).
+`expressive` drives. See [CHARACTERS.md](./CHARACTERS.md).
 
 ### `biome`
 

@@ -84,7 +84,7 @@ Full description in [AI_ASSIST.md](./AI_ASSIST.md). The shape:
       "node": "entity:kohane",          // kind:name, of a node this preset creates
       "slot": "main",                   // texture slot on that node
       "fileName": "kohane.png",
-      "url": "textures/companion/kohane/kohane.png",  // app-relative, under textures/
+      "url": "textures/characters/kohane/kohane.png",  // app-relative, under textures/
       "width": 512,
       "height": 512
     }

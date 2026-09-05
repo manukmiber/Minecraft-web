@@ -1,15 +1,15 @@
 /**
- * Renders the companion to PNG, for the README and the docs.
+ * Renders a character to PNG, for the README and the docs.
  *
  * The app already draws this model in the 3D preview; this puts the same
  * geometry and the same sheet through a headless Chromium so the pictures in the
  * documentation are generated from the source rather than screenshotted by hand
  * and then quietly going stale.
  *
- *     node scripts/render-companion.mjs
+ *     node scripts/render-character.mjs
  *
- * Writes `docs/images/companion-*.png`. Needs the artwork to exist, so run
- * `node scripts/make-companion.mjs` first if you have just changed the painter.
+ * Writes `docs/images/kohane-*.png`. Needs the artwork to exist, so run
+ * `node scripts/make-character.mjs` first if you have just changed the painter.
  */
 
 import fs from 'node:fs'
@@ -42,11 +42,11 @@ async function bundle(name, contents) {
 
 // The model, straight out of the app's own source.
 const specModule = await bundle(
-  'companion-spec.mjs',
+  'character-spec.mjs',
   `import { COMPANION, FACE_EXPRESSIONS } from './src/core/generators/bodies/companion'
    export { COMPANION, FACE_EXPRESSIONS }`,
 )
-const specOut = path.join(TMP, 'companion-spec.mjs')
+const specOut = path.join(TMP, 'character-spec.mjs')
 fs.writeFileSync(specOut, specModule)
 const { COMPANION, FACE_EXPRESSIONS } = await import(pathToFileURL(specOut).href)
 
@@ -56,13 +56,13 @@ const three = await bundle(
 )
 
 const skin = fs
-  .readFileSync(path.join(ROOT, 'public/textures/companion/kohane/kohane.png'))
+  .readFileSync(path.join(ROOT, 'public/textures/characters/kohane/kohane.png'))
   .toString('base64')
 
 /** One rendered figure: a rotation about Y, and which face variant to wear. */
 const SHOTS = [
   {
-    file: 'companion-turntable.png',
+    file: 'kohane-turntable.png',
     background: '#12151d',
     face: 'smile',
     width: 340,
@@ -70,7 +70,7 @@ const SHOTS = [
     views: [180, 145, 90, 0],
   },
   {
-    file: 'companion-portrait.png',
+    file: 'kohane-portrait.png',
     background: '#f2ece2',
     face: 'smile',
     width: 620,
@@ -78,7 +78,7 @@ const SHOTS = [
     views: [206],
   },
   {
-    file: 'companion-expressions.png',
+    file: 'kohane-expressions.png',
     background: '#12151d',
     face: null,
     width: 250,
@@ -231,7 +231,7 @@ window.renderShot = (shot, textureUrl) => new Promise((resolve) => {
 });
 <\/script></body></html>`
 
-const pageFile = path.join(TMP, 'render-companion.html')
+const pageFile = path.join(TMP, 'render-character.html')
 fs.writeFileSync(pageFile, page)
 
 const browser = await chromium.launch({

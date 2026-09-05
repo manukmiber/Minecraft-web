@@ -6,11 +6,12 @@
 import { useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Command } from 'cmdk'
-import { FileJson, Plus, Search } from 'lucide-react'
+import { FileJson, PersonStanding, Plus, Search } from 'lucide-react'
 
 import { cn, kindIcon, ACCENT_CLASS } from '../ui/primitives'
 import { useModalA11y } from '../ui/useModalA11y'
 import { allKinds, getKind } from '../../core/registry/types'
+import { useCompanion } from '../../state/companion'
 import { useProject } from '../../state/project'
 import { useUi, type SideView } from '../../state/ui'
 import { BUILTIN_PRESET_PACKS } from '../../presets'
@@ -32,12 +33,14 @@ const PANELS: Array<{ view: SideView; label: string }> = [
   { view: 'versions', label: 'Versions' },
   { view: 'compatibility', label: 'Compatibility' },
   { view: 'releases', label: 'Releases' },
+  { view: 'companion', label: 'Companion' },
   { view: 'settings', label: 'Settings' },
 ]
 
 export function CommandPalette() {
   const { paletteOpen, setPaletteOpen, setSideView } = useUi()
   const { project, files, addNode, openNode, openFile, applyPresetFile, toast } = useProject()
+  const companion = useCompanion()
 
   // Escape, a contained Tab cycle, and focus handed back to whatever opened it.
   const dialogRef = useModalA11y<HTMLDivElement>(paletteOpen, () => setPaletteOpen(false))
@@ -212,6 +215,33 @@ export function CommandPalette() {
                     </Item>
                   ))}
                 </Command.Group>
+
+                {companion.status === 'ready' ? (
+                  <Command.Group heading="Companion" className={GROUP_CLASS}>
+                    <Item
+                      value={`companion ${companion.enabled ? 'hide' : 'show'} kohane`}
+                      onSelect={() => {
+                        companion.setEnabled(!companion.enabled)
+                        close()
+                      }}
+                    >
+                      <PersonStanding size={14} aria-hidden="true" className="text-ink-300" />
+                      <span>{companion.enabled ? 'Hide Kohane' : 'Show Kohane'}</span>
+                    </Item>
+                    {companion.enabled ? (
+                      <Item
+                        value="companion kohane wave hello"
+                        onSelect={() => {
+                          companion.play('wave')
+                          close()
+                        }}
+                      >
+                        <PersonStanding size={14} aria-hidden="true" className="text-ink-300" />
+                        <span>Kohane · wave</span>
+                      </Item>
+                    ) : null}
+                  </Command.Group>
+                ) : null}
 
                 <Command.Group
                   heading="Go to"

@@ -7,3 +7,11 @@ dist
 .vscode/*
 !.vscode/extensions.json
 node_modules/.tmp
+
+# MMD companion models are never committed — see docs/COMPANION.md. They are
+# read in the browser and kept in IndexedDB, because the terms they ship under
+# almost always forbid redistribution.
+*.pmx
+*.pmd
+*.vmd
+*.vpd

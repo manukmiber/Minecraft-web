@@ -25,6 +25,7 @@ export type SideView =
   | 'versions'
   | 'compatibility'
   | 'releases'
+  | 'companion'
   | 'settings'
 
 interface UiState {
